@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriSynth - Sosyal Ağ</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --bg: #0a0a0a; --bg-elevated: #111111;
+            --surface: rgba(255,255,255,0.04); --surface-hover: rgba(255,255,255,0.07); --surface-active: rgba(255,255,255,0.1);
+            --border: rgba(255,255,255,0.07); --border-strong: rgba(255,255,255,0.12);
+            --text-main: #fafafa; --text-muted: #737373; --text-subtle: #404040;
+            --primary: #22c55e; --primary-dim: rgba(34,197,94,0.15); --accent-red: #ef4444;
+            --story-grad: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899, #8b5cf6);
+            --glass-blur: blur(20px); --sidebar-w: 260px; --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'DM Sans', sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
+        .spin { animation: spin 0.8s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* ── APP SHELL & SIDEBAR ─────────────────────────────────────── */
+        .app-container { display: flex; height: 100vh; width: 100%; max-width: 1400px; margin: 0 auto; }
+        .sidebar { width: var(--sidebar-w); padding: 20px 12px 24px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; flex-shrink: 0; }
+        .brand { font-family: 'Instrument Serif', serif; font-size: 26px; font-weight: 400; font-style: italic; background: var(--story-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 16px; padding: 8px 12px; cursor: pointer; letter-spacing: -0.5px; }
+        .nav-item { display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 400; cursor: pointer; padding: 12px 14px; border-radius: 12px; transition: var(--transition); color: var(--text-main); }
+        .nav-item-left { display: flex; align-items: center; gap: 14px; }
+        .nav-item i { width: 24px; height: 24px; stroke-width: 1.75px; flex-shrink: 0; color: var(--text-muted); transition: var(--transition); }
+        .nav-item.active { background: var(--surface-hover); font-weight: 600; }
+        .nav-item.active i { color: var(--text-main); }
+        .nav-item:hover { background: var(--surface); }
+        .nav-item:hover i { color: var(--text-main); }
+        .badge { background: var(--accent-red); color: white; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; display: none; }
+
+        /* ── SECTIONS ───────────────────────────────────────── */
+        .app-section { flex: 1; overflow-y: auto; display: none; flex-direction: column; align-items: center; padding: 32px 20px 40px; }
+        .app-section.active { display: flex; }
+        .feed-wrapper { width: 100%; max-width: 468px; }
+
+        /* ── STORIES (CIRCLES) ────────────────────────────────────────── */
+        .stories-container { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 20px; margin-bottom: 28px; }
+        .stories-container::-webkit-scrollbar { display: none; }
+        .story { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; min-width: 66px; position: relative; }
+        .story-ring { width: 66px; height: 66px; border-radius: 50%; background: var(--story-grad); display: flex; align-items: center; justify-content: center; padding: 2.5px; transition: transform 0.2s ease, opacity 0.2s ease; }
+        .story-ring.viewed { background: var(--text-subtle) !important; opacity: 0.6; }
+        .story:hover .story-ring { transform: scale(1.05); }
+        .story-ring img, .story-ring .avatar-placeholder { width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--bg); object-fit: cover; }
+        .story-name { font-size: 11px; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 66px; }
+        .story-add-btn { position: absolute; bottom: 22px; right: -2px; background: var(--primary); border: 2px solid var(--bg); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; color: white; }
+        .story-add-btn i { width: 12px !important; height: 12px !important; }
+        .story-add .story-ring { background: var(--surface-active) !important; border: 1.5px dashed var(--text-subtle); padding: 0; }
+        .avatar-placeholder { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary), #16a34a); color: white; font-weight: 600; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid var(--border); letter-spacing: -0.5px; }
+
+        /* ── YENİ: STORIES VIEWER (INSTAGRAM TARZI) ───────────────────── */
+        #storyViewerWrapper { position: fixed; inset: 0; background: #000; z-index: 99999; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        .story-viewer-content { position: relative; width: 100%; max-width: 450px; height: 100vh; display: flex; flex-direction: column; background: #111; overflow: hidden; }
+        @media (min-width: 768px) { .story-viewer-content { height: 90vh; border-radius: 16px; margin: auto; } }
+        
+        /* Üst Progress Barlar */
+        .story-progress-wrap { position: absolute; top: 12px; left: 10px; right: 10px; display: flex; gap: 4px; z-index: 100; }
+        .story-progress-item { flex: 1; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden; }
+        .story-progress-fill { height: 100%; width: 0%; background: white; border-radius: 2px; }
+        
+        /* Kullanıcı Bilgisi ve Kapat Butonu */
+        .story-viewer-header { position: absolute; top: 25px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        .story-viewer-user { display: flex; align-items: center; gap: 10px; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        .story-viewer-user img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.5); }
+        .story-viewer-user strong { font-size: 14px; font-weight: 600; }
+        .story-viewer-user span { font-size: 12px; opacity: 0.8; }
+        .story-close-btn { color: white; cursor: pointer; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
+
+        /* Medya Alanı */
+        .story-viewer-media { flex: 1; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; background: #000; }
+        .story-viewer-media img, .story-viewer-media video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Sağ-Sol Tıklama Alanları (Geçiş için) */
+        .story-nav-area { position: absolute; top: 80px; bottom: 80px; width: 30%; z-index: 50; }
+        .story-nav-left { left: 0; }
+        .story-nav-right { right: 0; width: 70%; } /* Sağ taraf daha geniş olsun ki kolay geçilsin */
+
+        /* Alt Yanıt / Silme Alanı */
+        .story-viewer-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 15px; z-index: 100; display: flex; gap: 12px; align-items: center; background: linear-gradient(transparent, rgba(0,0,0,0.8)); }
+        .story-reply-input { flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 30px; padding: 14px 20px; outline: none; font-family: 'DM Sans', sans-serif; backdrop-filter: blur(5px); }
+        .story-reply-input::placeholder { color: rgba(255,255,255,0.8); }
+        .story-send-btn { background: transparent; border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .story-delete-btn { width: 100%; background: transparent; border: 1px solid rgba(239,68,68,0.5); color: #ef4444; border-radius: 30px; padding: 14px; font-weight: bold; cursor: pointer; backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+        /* ── POST CARDS ─────────────────────────────────────── */
+        .post-card { background: transparent; border-bottom: 1px solid var(--border); overflow: hidden; padding-bottom: 8px; margin-bottom: 16px; width: 100%; }
+        .post-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px; }
+        .post-user { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .post-user-name { font-weight: 600; font-size: 14px; color: var(--text-main); }
+        .post-user-time { color: var(--text-muted); font-weight: 400; font-size: 13px; }
+        .post-media { width: 100%; border-radius: 12px; background: #0f0f0f; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; overflow: hidden; }
+        .post-media img, .post-media video { width: 100%; max-height: 600px; object-fit: cover; display: block; border-radius: 12px; }
+        .big-heart-overlay { position: absolute; width: 80px; height: 80px; fill: white; opacity: 0; transform: scale(0); pointer-events: none; z-index: 10; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4)); }
+        .big-heart-overlay.animate { animation: heartBurst 0.7s ease-out forwards; }
+        @keyframes heartBurst { 0% { opacity:0; transform:scale(0.3); } 20% { opacity:1; transform:scale(1.15); } 40% { transform:scale(0.95); } 60% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(0.8); } }
+        .post-actions { padding: 12px 0 8px; display: flex; gap: 16px; align-items: center; }
+        .post-actions i { cursor: pointer; transition: var(--transition); width: 24px; height: 24px; color: var(--text-main); }
+        .post-actions i:hover { opacity: 0.7; transform: scale(1.1); }
+        .post-actions i.liked { fill: var(--accent-red); color: var(--accent-red); animation: pop 0.25s ease; }
+        .post-actions i.saved { fill: var(--text-main); color: var(--text-main); }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+        .post-likes { font-size: 14px; font-weight: 600; padding: 0 0 4px; cursor: pointer; }
+        .post-caption { font-size: 14px; padding: 2px 0 6px; line-height: 1.5; }
+        .post-caption strong { font-weight: 600; cursor: pointer; margin-right: 4px; }
+        .post-comment-link { color: var(--text-muted); font-size: 13px; cursor: pointer; padding-bottom: 4px; }
+        .post-timestamp { color: var(--text-subtle); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding-top: 4px; }
+        .btn-follow { background: var(--primary); color: white; border: none; padding: 7px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; transition: var(--transition); font-family: 'DM Sans', sans-serif; }
+        .btn-follow:hover { opacity: 0.85; }
+        .btn-follow.following { background: var(--surface-active); border: 1px solid var(--border-strong); color: var(--text-main); }
+        .btn-follow.requested { background: transparent; border: 1px solid var(--text-subtle); color: var(--text-muted); }
+
+        /* ── REELS ALANI ────────────────────────────────── */
+        .reels-wrapper { width: 100%; max-width: 420px; height: calc(100vh - 80px); background: #000; border-radius: 16px; overflow-y: scroll; scroll-snap-type: y mandatory; position: relative; border: 1px solid var(--border); }
+        .reels-wrapper::-webkit-scrollbar { display: none; }
+        .reel-item { width: 100%; height: 100%; position: relative; scroll-snap-align: start; display: flex; align-items: center; justify-content: center; }
+        .reel-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .reel-overlay-right { position: absolute; right: 15px; bottom: 80px; display: flex; flex-direction: column; gap: 24px; align-items: center; z-index: 10; }
+        .reel-action { display: flex; flex-direction: column; align-items: center; gap: 4px; color: white; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        .reel-action i { width: 28px; height: 28px; transition: var(--transition); }
+        .reel-action i.liked { fill: var(--accent-red); color: var(--accent-red); animation: pop 0.25s ease; }
+        .reel-action span { font-size: 12px; font-weight: 600; }
+        .reel-overlay-bottom { position: absolute; left: 15px; bottom: 20px; right: 70px; z-index: 10; color: white; display: flex; flex-direction: column; gap: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        .reel-user-row { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .reel-user-row h4 { font-size: 15px; font-weight: 600; }
+        .reel-caption { font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* ── DM / MESSAGES ──────────────────────────────────── */
+        .dm-wrapper { width: 100%; max-width: 960px; height: calc(100vh - 80px); background: var(--bg-elevated); border-radius: 20px; border: 1px solid var(--border); display: flex; overflow: hidden; }
+        .dm-sidebar { width: 340px; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .dm-sidebar-header { padding: 22px 20px 16px; font-weight: 700; font-size: 17px; border-bottom: 1px solid var(--border); }
+        .dm-chat-area { flex: 1; display: flex; flex-direction: column; }
+        .dm-user-item { padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: var(--transition); }
+        .dm-user-item:hover, .dm-user-item.active { background: var(--surface); }
+        .dm-user-name { font-size: 14px; font-weight: 600; }
+        .chat-messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .chat-bubble { max-width: 65%; padding: 10px 14px; border-radius: 22px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+        .chat-bubble.sent { background: var(--primary); align-self: flex-end; border-bottom-right-radius: 6px; color: white; }
+        .chat-bubble.received { background: var(--surface-active); align-self: flex-start; border-bottom-left-radius: 6px; border: 1px solid var(--border); }
+        .chat-media-preview { width: 100%; max-width: 200px; border-radius: 10px; margin-bottom: 6px; display: block; cursor: pointer; }
+        .dm-input-wrap { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); }
+        .dm-input-wrap input { flex: 1; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 24px; padding: 11px 18px; color: var(--text-main); outline: none; font-size: 14px; font-family: 'DM Sans', sans-serif; transition: var(--transition); }
+        .dm-input-wrap input:focus { border-color: var(--primary); background: var(--surface-hover); }
+        .dm-send-btn { background: var(--primary); color: white; border: none; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: var(--transition); }
+        .dm-send-btn:hover { background: #16a34a; }
+        .dm-send-btn i { width: 17px; height: 17px; margin-left: -1px; }
+
+        /* ── EXPLORE ────────────────────────────────────────── */
+        .search-wrap { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 16px; margin-bottom: 24px; width: 100%; max-width: 936px; transition: var(--transition); }
+        .search-wrap:focus-within { border-color: var(--border-strong); background: var(--surface-hover); }
+        .search-wrap i { color: var(--text-muted); width: 18px; height: 18px; flex-shrink: 0; }
+        .search-wrap input { background: transparent; border: none; color: var(--text-main); width: 100%; outline: none; font-size: 14px; font-family: 'DM Sans', sans-serif; }
+        .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: 100%; max-width: 936px; }
+        .grid-item { aspect-ratio: 1; background: var(--surface); position: relative; cursor: pointer; overflow: hidden; }
+        .grid-item img, .grid-item video { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s ease; display: block; }
+        .grid-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; gap: 24px; opacity: 0; transition: opacity 0.25s ease; color: white; font-weight: 700; font-size: 15px; }
+        .grid-overlay span { display: flex; align-items: center; gap: 6px; }
+        .grid-overlay i { width: 20px; height: 20px; fill: white; color: white; }
+        .grid-item:hover img, .grid-item:hover video { transform: scale(1.04); }
+        .grid-item:hover .grid-overlay { opacity: 1; }
+
+        /* ── MODALS ─────────────────────────────────────────── */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: var(--bg-elevated); width: 100%; max-width: 440px; border-radius: 16px; border: 1px solid var(--border-strong); box-shadow: 0 24px 64px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 700; }
+        .modal-header i { cursor: pointer; color: var(--text-muted); width: 20px; height: 20px; transition: var(--transition); }
+        .modal-header i:hover { color: var(--text-main); }
+        .form-input, .form-select { width: 100%; background: var(--surface); border: 1px solid var(--border); padding: 12px 14px; color: var(--text-main); border-radius: 10px; margin-bottom: 14px; outline: none; font-size: 14px; font-family: 'DM Sans', sans-serif; transition: var(--transition); }
+        .form-input:focus, .form-select:focus { border-color: var(--border-strong); background: var(--surface-hover); }
+        .form-select option { background: #1a1a1a; }
+        .btn-primary { width: 100%; background: var(--primary); color: white; padding: 13px; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: var(--transition); font-family: 'DM Sans', sans-serif; }
+        .btn-primary:hover { background: #16a34a; }
+        .btn-secondary { width: 100%; background: transparent; color: var(--text-main); border: 1px solid var(--border-strong); padding: 13px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: var(--transition); }
+        .btn-secondary:hover { background: var(--surface); }
+
+        /* ── POST VIEW MODAL ────────────────────────────────── */
+        .post-view-modal { max-width: 960px; flex-direction: row; height: 88vh; background: var(--bg-elevated); }
+        .post-view-img { flex: 1.4; background: #000; display: flex; align-items: center; justify-content: center; }
+        .post-view-img img, .post-view-img video { width: 100%; max-height: 100%; object-fit: contain; }
+        .post-view-sidebar { width: 380px; flex-shrink: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border); }
+        .post-view-comments { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .comment-item { display: flex; gap: 10px; font-size: 14px; line-height: 1.5; align-items: flex-start; }
+        .comment-text strong { font-weight: 600; margin-right: 5px; cursor:pointer;}
+        .comment-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+        .comment-input-area { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border); padding: 14px 18px; }
+        .comment-input-area input { flex: 1; background: transparent; border: none; color: var(--text-main); outline: none; font-size: 14px; font-family: 'DM Sans', sans-serif; }
+        .comment-input-area button { background: transparent; border: none; color: var(--primary); font-weight: 700; cursor: pointer; font-size: 14px; transition: var(--transition); }
+        .comment-input-area button:hover { opacity: 0.75; }
+
+        /* ── OPTIONS MENU ───────────────────────────────────── */
+        .options-menu { background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 320px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .options-btn { width: 100%; padding: 16px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text-main); font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'DM Sans', sans-serif; transition: var(--transition); }
+        .options-btn i { width: 18px; height: 18px; stroke-width: 2px; }
+        .options-btn.danger { color: var(--accent-red); font-weight: 700; }
+        .options-btn:hover { background: var(--surface-active); padding-left: 24px; }
+        .options-btn:last-child { border-bottom: none; }
+
+        /* ── PROFILE & TABS ────────────────────────────────────────── */
+        .profile-header { width: 100%; max-width: 936px; display: flex; gap: 60px; padding: 0 12px; align-items: center; }
+        .profile-avatar-wrap { width: 140px; height: 140px; border-radius: 50%; background: var(--story-grad); padding: 3px; flex-shrink: 0; }
+        .profile-stats { display: flex; gap: 36px; margin-bottom: 18px; }
+        .profile-stat { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+        .profile-stat strong { font-size: 18px; font-weight: 700; }
+        .profile-stat span { font-size: 13px; color: var(--text-muted); }
+        .profile-actions-row { display: flex; gap: 10px; margin-top: 15px; }
+        .profile-bio-text { font-size: 14px; line-height: 1.5; color: var(--text-main); margin-bottom: 15px; white-space: pre-wrap; }
+        .profile-tabs { display: flex; justify-content: center; gap: 50px; width: 100%; max-width: 936px; border-top: 1px solid var(--border); margin-top: 30px; margin-bottom: 10px; }
+        .profile-tab { padding: 16px 0; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; cursor: pointer; border-top: 2px solid transparent; display: flex; align-items: center; gap: 8px; transition: var(--transition); }
+        .profile-tab.active { color: var(--text-main); border-top-color: var(--text-main); }
+        .profile-tab i { width: 14px; height: 14px; }
+
+        .user-list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; transition: var(--transition); }
+        .user-list-item:hover { background: var(--surface); }
+        .upload-label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 28px 20px; border: 1.5px dashed var(--text-subtle); border-radius: 12px; margin-bottom: 14px; cursor: pointer; transition: var(--transition); color: var(--text-muted); font-size: 14px; }
+        .upload-label:hover { border-color: var(--border-strong); background: var(--surface); color: var(--text-main); }
+        .notif-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .notif-actions { display: flex; gap: 8px; }
+        .notif-accept { background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+        .notif-reject { background: transparent; border: 1px solid var(--border-strong); color: var(--text-main); padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+        .search-result-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; }
+        .share-user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); transition: var(--transition); }
+        .share-user-item:hover { background: var(--surface); }
+        .send-btn { background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+        .send-btn:disabled { opacity: 0.4; }
+
+        @media (max-width: 768px) {
+            :root { --sidebar-w: 100%; }
+            .app-container { flex-direction: column; }
+            .sidebar { width: 100%; height: 56px; flex-direction: row; justify-content: space-around; align-items: center; padding: 0 8px; position: fixed; bottom: 0; z-index: 100; border-top: 1px solid var(--border); border-right: none; background: rgba(10,10,10,0.95); backdrop-filter: var(--glass-blur); gap: 0; }
+            .brand, .nav-item span { display: none; }
+            .nav-item { padding: 10px 16px; border-radius: 8px; }
+            .nav-item i { color: var(--text-muted); width: 22px; height: 22px; }
+            .nav-item.active i { color: var(--text-main); }
+            .app-section { padding: 16px 12px 72px; }
+            .post-view-modal { flex-direction: column; overflow-y: auto; height: 95vh; }
+            .post-view-img { flex: none; min-height: 320px; }
+            .post-view-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 50vh; }
+            .dm-sidebar { display: none; }
+            .dm-wrapper { border-radius: 12px; }
+            .profile-header { flex-direction: column; gap: 20px; align-items: flex-start; padding: 0 4px; }
+            .profile-avatar-wrap { width: 100px; height: 100px; }
+            .reels-wrapper { height: calc(100vh - 60px); max-width: 100%; border-radius: 0; border: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <aside class="sidebar">
+        <div class="brand" onclick="switchTab('feed')">AgriSynth</div>
+        <div class="nav-item active" onclick="switchTab('feed', this)"><div class="nav-item-left"><i data-feather="home"></i><span>Akış</span></div></div>
+        <div class="nav-item" onclick="switchTab('explore', this)"><div class="nav-item-left"><i data-feather="search"></i><span>Keşfet</span></div></div>
+        <div class="nav-item" onclick="switchTab('reels', this)"><div class="nav-item-left"><i data-feather="film"></i><span>Reels</span></div></div>
+        <div class="nav-item" onclick="switchTab('dm', this)"><div class="nav-item-left"><i data-feather="send"></i><span>Mesajlar</span></div></div>
+        <div class="nav-item" onclick="openNotifications()"><div class="nav-item-left"><i data-feather="heart"></i><span>Bildirimler</span></div><span class="badge" id="notifBadge">0</span></div>
+        <div class="nav-item" onclick="document.getElementById('shareModal').style.display='flex'"><div class="nav-item-left"><i data-feather="plus-square"></i><span>Oluştur</span></div></div>
+        <div class="nav-item" onclick="openProfile()"><div class="nav-item-left"><div id="sidebarAvatarContainer"></div><span>Profilim</span></div></div>
+        <div class="nav-item" style="margin-top:auto;" onclick="window.location.href='ciftci.html'"><div class="nav-item-left"><i data-feather="grid"></i><span>Panele Dön</span></div></div>
+    </aside>
+
+    <main class="app-section active" id="feedSection">
+        <div class="feed-wrapper">
+            <div class="stories-container" id="storiesContainer"></div>
+            <div id="postsContainer"></div>
+        </div>
+    </main>
+
+    <main class="app-section" id="reelsSection" style="padding: 10px;">
+        <div class="reels-wrapper" id="reelsContainer"></div>
+    </main>
+
+    <main class="app-section" id="dmSection">
+        <div class="dm-wrapper">
+            <div class="dm-sidebar">
+                <div class="dm-sidebar-header">Mesajlar</div>
+                <div id="dmChatList" style="overflow-y:auto; flex:1;">
+                    <div style="padding:24px; text-align:center; color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>
+                </div>
+            </div>
+            <div class="dm-chat-area">
+                <div id="dmChatHeader" style="padding:16px 20px; border-bottom:1px solid var(--border); display:none; align-items:center; gap:12px;">
+                    <div id="dmActiveAvatar"></div>
+                    <h4 id="dmActiveName" style="font-size:15px; font-weight:700;">Kullanıcı</h4>
+                </div>
+                <div id="dmMessages" class="chat-messages-area">
+                    <div class="dm-empty"><i data-feather="send"></i><p>Sohbet başlatmak için soldaki birini seçin</p></div>
+                </div>
+                <div id="dmInputArea" style="display:none;" class="dm-input-wrap">
+                    <input type="text" id="dmInput" placeholder="Mesaj yaz..." onkeypress="if(event.key === 'Enter') sendDMMessage()">
+                    <button class="dm-send-btn" onclick="sendDMMessage()"><i data-feather="send"></i></button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <main class="app-section" id="exploreSection">
+        <div class="search-wrap">
+            <i data-feather="search"></i>
+            <input type="text" id="searchInput" placeholder="Çiftçi ara..." oninput="handleSearch(this.value)">
+        </div>
+        <div id="searchResults" style="width:100%; max-width:936px; margin-bottom:16px;"></div>
+        <div class="grid-container" id="exploreGrid"></div>
+    </main>
+
+    <main class="app-section" id="profileSection">
+        <div class="profile-header">
+            <div class="profile-avatar-wrap" id="profilePageAvatar"></div>
+            <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+                    <h2 id="profilePageName" style="font-size:22px; font-weight:400; letter-spacing:-0.3px;">Kullanıcı</h2>
+                    <div id="profilePageActionBtn"></div>
+                </div>
+                <div class="profile-stats">
+                    <div class="profile-stat"><strong id="profileStatPosts">0</strong><span>gönderi</span></div>
+                    <div class="profile-stat" onclick="showFollowersList()"><strong id="profileStatFollowers">0</strong><span>takipçi</span></div>
+                    <div class="profile-stat" onclick="showFollowingList()"><strong id="profileStatFollowing">0</strong><span>takip</span></div>
+                </div>
+                <div class="profile-bio-text" id="profilePageBio"></div>
+            </div>
+        </div>
+        
+        <div class="profile-tabs" id="profileTabsContainer">
+            <div class="profile-tab active" id="tabPostsBtn" onclick="switchProfileTab('posts')"><i data-feather="grid"></i> GÖNDERİLER</div>
+        </div>
+
+        <div class="grid-container" id="profileGrid"></div>
+    </main>
+</div>
+
+<div class="modal-overlay" id="shareModal">
+    <div class="modal-content" style="max-width:400px; padding:0;">
+        <div class="modal-header"><span>Yeni Gönderi</span><i data-feather="x" onclick="document.getElementById('shareModal').style.display='none'"></i></div>
+        <div style="padding:20px;">
+            <select id="postType" class="form-select">
+                <option value="post">Gönderi</option>
+                <option value="reel">Reels (Video)</option>
+                <option value="story">Hikaye</option>
+            </select>
+            
+            <div id="storyDurationWrap" style="display:none; align-items:center; gap:10px; margin-bottom:15px;">
+                <label style="font-size:13px; color:var(--text-muted);">Süre:</label>
+                <select id="storyDuration" class="form-select" style="margin-bottom:0; padding:8px;">
+                    <option value="5">5 Saniye</option>
+                    <option value="10">10 Saniye</option>
+                    <option value="15">15 Saniye</option>
+                </select>
+            </div>
+
+            <input type="file" id="mediaUpload" accept="image/*,video/*" style="display:none;" onchange="previewMedia(event)">
+            <label for="mediaUpload" class="upload-label"><i data-feather="image"></i><span>Fotoğraf veya video seç</span></label>
+            <img id="mediaPreview" src="" style="display:none; width:100%; border-radius:10px; margin-bottom:14px; max-height:200px; object-fit:cover;">
+            <video id="mediaPreviewVideo" src="" controls style="display:none; width:100%; border-radius:10px; margin-bottom:14px; max-height:200px; object-fit:cover;"></video>
+            <textarea id="postCaption" rows="3" placeholder="Açıklama yaz..." class="form-input" style="resize:none;"></textarea>
+            <div id="exploreToggleWrap" style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+                <input type="checkbox" id="postExplore" checked style="width:15px; height:15px; accent-color:var(--primary);">
+                <label for="postExplore" style="font-size:13px; color:var(--text-muted); cursor:pointer;">Keşfet'te göster</label>
+            </div>
+            <button class="btn-primary" id="btnShare" onclick="uploadAndShare()">Paylaş</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="editProfileModal">
+    <div class="modal-content" style="max-width:400px; padding:0;">
+        <div class="modal-header"><span>Profili Düzenle</span><i data-feather="x" onclick="document.getElementById('editProfileModal').style.display='none'"></i></div>
+        <div style="padding:20px;">
+            <input type="text" id="editName" class="form-input" placeholder="Ad Soyad">
+            <textarea id="editBio" class="form-input" rows="3" placeholder="Biyografi" style="resize:none;"></textarea>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding: 10px; border: 1px solid var(--border); border-radius: 10px;">
+                <div>
+                    <div style="font-weight:600; font-size:14px; color:white;">Gizli Hesap</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Açıksa, gönderilerini sadece onayladığın takipçiler görür.</div>
+                </div>
+                <input type="checkbox" id="editIsPrivate" style="width:20px; height:20px; accent-color:var(--primary);">
+            </div>
+            <button class="btn-primary" id="btnSaveProfile" onclick="saveProfile()">Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="postShareModal">
+    <div class="modal-content" style="padding:0; max-height:520px;">
+        <div class="modal-header"><span>Gönder</span><i data-feather="x" onclick="document.getElementById('postShareModal').style.display='none'"></i></div>
+        <div style="padding:12px 16px; border-bottom:1px solid var(--border);">
+            <input type="text" placeholder="Kişi ara..." style="width:100%; background:var(--surface); border:1px solid var(--border); padding:10px 14px; border-radius:10px; color:white; outline:none; font-size:14px;" oninput="filterPostShareList(this.value)">
+        </div>
+        <div id="postShareList" style="flex:1; overflow-y:auto; padding:8px 0;"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="optionsModal">
+    <div class="options-menu">
+        <button class="options-btn" id="optLikeBtn" onclick="optToggleLike()"><i data-feather="heart"></i> Beğen</button>
+        <button class="options-btn" id="optCommentBtn" onclick="optOpenComment()"><i data-feather="message-circle"></i> Yorum Yap</button>
+        <button class="options-btn" id="optSaveBtn" onclick="optToggleSave()"><i data-feather="bookmark"></i> Kaydet</button>
+        <button class="options-btn" id="optShareBtn" onclick="optShare()"><i data-feather="send"></i> Paylaş</button>
+        <button class="options-btn danger" id="optDeleteBtn" style="display:none;" onclick="optDeletePost()"><i data-feather="trash-2"></i> Sil</button>
+        <button class="options-btn" onclick="document.getElementById('optionsModal').style.display='none'">İptal</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="postViewModal">
+    <div class="modal-content post-view-modal">
+        <div class="post-view-img" id="pvMedia"></div>
+        <div class="post-view-sidebar">
+            <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;" id="pvHeader"></div>
+            <div class="post-view-comments" id="pvComments"></div>
+            <div style="padding:12px 20px; border-top:1px solid var(--border);">
+                <div style="display:flex; gap:16px; align-items:center; padding-bottom:10px;" id="pvActions"></div>
+                <div style="font-weight:700; font-size:14px; margin-bottom:4px;" id="pvLikesCount">0 beğenme</div>
+                <div style="color:var(--text-subtle); font-size:11px; text-transform:uppercase;" id="pvTime">Az önce</div>
+            </div>
+            <div class="comment-input-area">
+                <input type="text" id="pvCommentInput" placeholder="Yorum ekle..." onkeypress="if(event.key === 'Enter') submitComment()">
+                <button onclick="submitComment()">Paylaş</button>
+            </div>
+        </div>
+    </div>
+    <i data-feather="x" style="position:absolute; top:20px; right:20px; color:white; cursor:pointer; width:28px; height:28px;" onclick="document.getElementById('postViewModal').style.display='none'"></i>
+</div>
+
+<div class="modal-overlay" id="listModal">
+    <div class="modal-content" style="padding:0; max-width:400px;">
+        <div class="modal-header"><span id="listModalTitle">Liste</span><i data-feather="x" onclick="document.getElementById('listModal').style.display='none'"></i></div>
+        <div id="listModalContent" style="padding:12px 16px; overflow-y:auto; max-height:420px;"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="notifModal">
+    <div class="modal-content" style="padding:0; max-width:400px;">
+        <div class="modal-header"><span>Takip İstekleri</span><i data-feather="x" onclick="document.getElementById('notifModal').style.display='none'"></i></div>
+        <div id="notifList" style="padding:12px 16px; max-height:420px; overflow-y:auto;">
+            <div style="text-align:center; padding:20px; color:var(--text-muted);">Yükleniyor...</div>
+        </div>
+    </div>
+</div>
+
+<div id="storyViewerWrapper">
+    <div class="story-viewer-content">
+        <div class="story-progress-wrap" id="storyProgressWrap"></div>
+        <div class="story-viewer-header">
+            <div class="story-viewer-user">
+                <div id="storyViewerAvatar"></div>
+                <div>
+                    <strong id="storyViewerName"></strong>
+                    <span id="storyViewerTime"></span>
+                </div>
+            </div>
+            <i data-feather="x" class="story-close-btn" onclick="closeStoryViewer()"></i>
+        </div>
+        <div class="story-viewer-media" id="storyViewerMedia"></div>
+        <div class="story-nav-area story-nav-left" onclick="prevStory()"></div>
+        <div class="story-nav-area story-nav-right" onclick="nextStory()"></div>
+        <div class="story-viewer-footer" id="storyViewerFooter"></div>
+    </div>
+</div>
+
+<script>
+    feather.replace();
+
+    const SUPABASE_URL = 'https://chozcpctihufghnzsten.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob3pjcGN0aWh1ZmdobnpzdGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MzYxNTAsImV4cCI6MjA4ODIxMjE1MH0.r3ZwkAT0RqWHryEolLwcUzsB2Gu-iW3O9fKesyjd6eE';
+    let supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let currentUser = null;
+    let myFollowingIds = [];  
+    let myRequestedIds = [];
+    let mySavedPostIds = []; 
+    let viewedStories = JSON.parse(localStorage.getItem('agrisynth_viewed_stories') || '[]');
+    let isLoaded = { feed: false, explore: false, dm: false, reels: false };
+    
+    let currentViewingProfileId = null; 
+    let currentActivePostId = null; 
+    let searchTimeout = null;
+    let dmActiveUserId = null;
+    let dmSubscription = null;
+
+    // Hikaye Değişkenleri
+    let storyGroups = [];
+    let currStoryGroupIdx = 0;
+    let currStoryIdx = 0;
+    let storyTimer = null;
+    let storyProgressInterval = null;
+    let currentVideoEl = null;
+
+    window.onload = async () => {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error || !session) return window.location.href = "index.html";
+        currentUser = session.user;
+        
+        await initProfile();
+        await fetchFollowData();
+        await fetchSavedPostsData();
+        await checkNotifications();
+        
+        loadFeed();
+        isLoaded.feed = true;
+    };
+
+    function timeAgo(d) {
+        const s = Math.floor((new Date() - new Date(d)) / 1000);
+        if (s > 86400) return Math.floor(s/86400) + "g";
+        if (s > 3600) return Math.floor(s/3600) + "s";
+        if (s > 60) return Math.floor(s/60) + "d";
+        return "Az önce";
+    }
+
+    function generateAvatar(u, size = 44) {
+        if (u.avatar_url) return `<img src="${u.avatar_url}" style="width:${size}px; height:${size}px; border-radius:50%; object-fit:cover; display:block;">`;
+        const init = (u.username || u.ad || 'U').charAt(0).toUpperCase();
+        return `<div class="avatar-placeholder" style="width:${size}px; height:${size}px; font-size:${Math.max(size/2.8, 11)}px;">${init}</div>`;
+    }
+
+    async function initProfile() {
+        const { data } = await supabaseClient.from('users').select('*').eq('id', currentUser.id).single();
+        if (data) document.getElementById('sidebarAvatarContainer').innerHTML = generateAvatar(data, 28);
+    }
+
+    async function fetchFollowData() {
+        const { data } = await supabaseClient.from('social_follows').select('following_id, status').eq('follower_id', currentUser.id);
+        if (data) {
+            myFollowingIds = data.filter(d => d.status === 'accepted').map(d => d.following_id);
+            myRequestedIds = data.filter(d => d.status === 'pending').map(d => d.following_id);
+        }
+    }
+
+    async function fetchSavedPostsData() {
+        const { data } = await supabaseClient.from('social_saves').select('post_id').eq('user_id', currentUser.id);
+        if (data) mySavedPostIds = data.map(d => d.post_id);
+    }
+
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
+        if(el) { document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
+        document.getElementById(tabId + 'Section').classList.add('active');
+        
+        if(tabId === 'feed' && !isLoaded.feed) { loadFeed(); isLoaded.feed = true; }
+        if(tabId === 'explore' && !isLoaded.explore) { loadExplore(); isLoaded.explore = true; }
+        if(tabId === 'reels' && !isLoaded.reels) { loadReels(); isLoaded.reels = true; }
+        if(tabId === 'dm' && !isLoaded.dm) { loadDMList(); isLoaded.dm = true; }
+    }
+
+    /* ─── AKIŞ ─────────────────────────────────────── */
+    async function loadFeed() {
+        loadStories();
+        const cont = document.getElementById('postsContainer');
+        cont.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>`; feather.replace();
+        
+        const { data: posts } = await supabaseClient.from('social_posts')
+            .select('*, users(id, ad, username, avatar_url), social_likes(user_id), social_comments(id)')
+            .eq('post_type', 'post').in('user_id', [currentUser.id, ...myFollowingIds]).order('created_at', { ascending: false }).limit(20);
+        
+        if (!posts || posts.length === 0) {
+            cont.innerHTML = `<div style="text-align:center; padding:60px; color:var(--text-muted);">Akışın boş.<br><span style="font-size:13px;">Keşfet'ten çiftçiler bul.</span></div>`; return;
+        }
+        cont.innerHTML = posts.map(p => generatePostHTML(p)).join(''); feather.replace();
+    }
+
+    function generatePostHTML(p) {
+        const isLiked = p.social_likes.some(l => l.user_id === currentUser.id);
+        const isSaved = mySavedPostIds.includes(p.id);
+        const mediaEl = p.media_url.includes('.mp4')
+            ? `<video src="${p.media_url}" controls style="width:100%; max-height:600px; object-fit:cover; display:block;"></video>`
+            : `<img src="${p.media_url}" style="width:100%; max-height:600px; object-fit:cover; display:block;">`;
+
+        return `
+        <div class="post-card" id="post-${p.id}">
+            <div class="post-header">
+                <div class="post-user" onclick="openProfile('${p.user_id}')">
+                    ${generateAvatar(p.users, 38)}
+                    <div>
+                        <div class="post-user-name">${p.users.username || p.users.ad}</div>
+                        <div class="post-user-time">${timeAgo(p.created_at)}</div>
+                    </div>
+                </div>
+                <i data-feather="more-horizontal" style="color:var(--text-muted); cursor:pointer; width:20px; height:20px;" onclick="showPostOptions('${p.id}', '${p.user_id}', '${p.media_url}')"></i>
+            </div>
+            <div class="post-media" ondblclick="triggerDoubleTapLike('${p.id}', this)">
+                <i data-feather="heart" class="big-heart-overlay"></i>
+                ${mediaEl}
+            </div>
+            <div class="post-actions">
+                <i data-feather="heart" class="heart-icon ${isLiked ? 'liked' : ''}" style="${isLiked ? 'fill:var(--accent-red);color:var(--accent-red);' : ''}" onclick="toggleLike('${p.id}', this)"></i>
+                <i data-feather="message-circle" onclick="openPostDetail('${p.id}')"></i>
+                <i data-feather="send" onclick="openPostShareModal('${p.id}', '${p.media_url}')"></i>
+                <i data-feather="bookmark" class="save-icon ${isSaved ? 'saved' : ''}" style="margin-left:auto; ${isSaved ? 'fill:white;color:white;' : ''}" onclick="toggleBookmark('${p.id}', this)"></i>
+            </div>
+            <div class="post-likes" onclick="showLikes('${p.id}')"><span id="likes-count-${p.id}">${p.social_likes.length}</span> beğenme</div>
+            <div class="post-caption"><strong onclick="openProfile('${p.user_id}')">${p.users.username || p.users.ad}</strong>${p.caption}</div>
+            <div class="post-comment-link" onclick="openPostDetail('${p.id}')">${p.social_comments.length > 0 ? p.social_comments.length + ' yorumun tamamını gör' : 'Yorum ekle...'}</div>
+        </div>`;
+    }
+
+    /* ─── YENİ: HİKAYE MİMARİSİ (Instagram Klonu) ───────────────────────── */
+    async function loadStories() {
+        const { data: stories } = await supabaseClient.from('social_stories').select('*, users(ad, username, avatar_url)').gt('expires_at', new Date().toISOString()).in('user_id', [currentUser.id, ...myFollowingIds]).order('created_at', { ascending: true });
+        
+        let userStoryMap = {};
+        let myStoryCount = 0;
+        
+        if (stories) {
+            stories.forEach(s => {
+                if (!userStoryMap[s.user_id]) userStoryMap[s.user_id] = { user: s.users, stories: [] };
+                userStoryMap[s.user_id].stories.push(s);
+                if (s.user_id === currentUser.id) myStoryCount++;
+            });
+        }
+
+        // Grupları sırala: Kendi hikayem en başta, sonra diğerleri (Eğer izlenmemiş varsa önce)
+        storyGroups = [];
+        if (userStoryMap[currentUser.id]) {
+            storyGroups.push({ userId: currentUser.id, ...userStoryMap[currentUser.id] });
+            delete userStoryMap[currentUser.id];
+        }
+        Object.keys(userStoryMap).forEach(uid => {
+            storyGroups.push({ userId: uid, ...userStoryMap[uid] });
+        });
+
+        let html = '';
+        if (myStoryCount > 0) {
+            let myGroupIndex = storyGroups.findIndex(g => g.userId === currentUser.id);
+            html += `<div class="story" onclick="openStoryViewer(${myGroupIndex})">
+                        <div class="story-ring">${generateAvatar(storyGroups[myGroupIndex].user, 60)}</div>
+                        <span class="story-name">Hikayen</span>
+                        <div class="story-add-btn" onclick="event.stopPropagation(); document.getElementById('shareModal').style.display='flex'"><i data-feather="plus"></i></div>
+                    </div>`;
+        } else {
+            html += `<div class="story story-add" onclick="document.getElementById('shareModal').style.display='flex'">
+                        <div class="story-ring"><i data-feather="plus" style="color:var(--text-muted); width:24px; height:24px;"></i></div>
+                        <span class="story-name">Hikayen</span>
+                    </div>`;
+        }
+
+        storyGroups.forEach((group, index) => {
+            if(group.userId === currentUser.id) return;
+            const allViewed = group.stories.every(s => viewedStories.includes(s.id));
+            const isViewedCls = allViewed ? 'viewed' : '';
+            html += `<div class="story" onclick="openStoryViewer(${index})"><div class="story-ring ${isViewedCls}">${generateAvatar(group.user, 60)}</div><span class="story-name">${group.user.username || group.user.ad}</span></div>`; 
+        });
+
+        document.getElementById('storiesContainer').innerHTML = html; feather.replace();
+    }
+
+    function openStoryViewer(groupIdx) {
+        if (!storyGroups[groupIdx] || storyGroups[groupIdx].stories.length === 0) return;
+        currStoryGroupIdx = groupIdx;
+        currStoryIdx = 0;
+        document.getElementById('storyViewerWrapper').style.display = 'flex';
+        renderStory();
+    }
+
+    function renderStory() {
+        clearTimeout(storyTimer); clearInterval(storyProgressInterval);
+        if (currentVideoEl) { currentVideoEl.pause(); currentVideoEl = null; }
+
+        const group = storyGroups[currStoryGroupIdx];
+        const story = group.stories[currStoryIdx];
+        const isMe = group.userId === currentUser.id;
+
+        // İzledim kaydı
+        if(!viewedStories.includes(story.id)) {
+            viewedStories.push(story.id);
+            localStorage.setItem('agrisynth_viewed_stories', JSON.stringify(viewedStories));
+        }
+
+        // Progress Barları Oluştur
+        const progWrap = document.getElementById('storyProgressWrap');
+        progWrap.innerHTML = group.stories.map((s, i) => `
+            <div class="story-progress-item">
+                <div class="story-progress-fill" id="prog-fill-${i}" style="width: ${i < currStoryIdx ? '100%' : '0%'}"></div>
+            </div>
+        `).join('');
+
+        // Header
+        document.getElementById('storyViewerAvatar').innerHTML = generateAvatar(group.user, 34);
+        document.getElementById('storyViewerName').innerText = group.user.username || group.user.ad;
+        document.getElementById('storyViewerTime').innerText = timeAgo(story.created_at);
+
+        // Footer (Yanıt veya Sil)
+        const footer = document.getElementById('storyViewerFooter');
+        if (isMe) {
+            footer.innerHTML = `<button class="story-delete-btn" onclick="deleteStory('${story.id}', '${story.media_url}')"><i data-feather="trash-2"></i> Sil</button>`;
+        } else {
+            footer.innerHTML = `<input type="text" class="story-reply-input" id="storyReplyInput" placeholder="Hikayeye yanıt ver..." onkeypress="if(event.key === 'Enter') sendStoryReply('${group.userId}', '${story.media_url}')">
+                                <button class="story-send-btn" onclick="sendStoryReply('${group.userId}', '${story.media_url}')"><i data-feather="send" style="width:24px;"></i></button>`;
+        }
+        feather.replace();
+
+        // Medya
+        const mediaCont = document.getElementById('storyViewerMedia');
+        if (story.media_url.includes('.mp4')) {
+            mediaCont.innerHTML = `<video src="${story.media_url}" autoplay playsinline></video>`;
+            currentVideoEl = mediaCont.querySelector('video');
+            currentVideoEl.onended = nextStory;
+            
+            // Progress Bar Video'ya Göre
+            currentVideoEl.ontimeupdate = () => {
+                if(currentVideoEl.duration) {
+                    const pct = (currentVideoEl.currentTime / currentVideoEl.duration) * 100;
+                    document.getElementById(`prog-fill-${currStoryIdx}`).style.width = `${pct}%`;
+                }
+            };
+        } else {
+            mediaCont.innerHTML = `<img src="${story.media_url}">`;
+            let durationSec = story.duration_seconds || 5; 
+            let durationMs = durationSec * 1000;
+            let elapsed = 0;
+            
+            storyProgressInterval = setInterval(() => {
+                elapsed += 50;
+                let pct = (elapsed / durationMs) * 100;
+                if (pct > 100) pct = 100;
+                document.getElementById(`prog-fill-${currStoryIdx}`).style.width = `${pct}%`;
+            }, 50);
+
+            storyTimer = setTimeout(nextStory, durationMs);
+        }
+    }
+
+    function nextStory() {
+        const group = storyGroups[currStoryGroupIdx];
+        if (currStoryIdx < group.stories.length - 1) {
+            currStoryIdx++; renderStory();
+        } else {
+            if (currStoryGroupIdx < storyGroups.length - 1) {
+                currStoryGroupIdx++; currStoryIdx = 0; renderStory();
+            } else {
+                closeStoryViewer();
+            }
+        }
+    }
+
+    function prevStory() {
+        if (currStoryIdx > 0) {
+            currStoryIdx--; renderStory();
+        } else {
+            if (currStoryGroupIdx > 0) {
+                currStoryGroupIdx--; 
+                currStoryIdx = storyGroups[currStoryGroupIdx].stories.length - 1; // Önceki grubun son hikayesine dön
+                renderStory();
+            }
+        }
+    }
+
+    function closeStoryViewer() {
+        clearTimeout(storyTimer); clearInterval(storyProgressInterval);
+        if (currentVideoEl) { currentVideoEl.pause(); currentVideoEl = null; }
+        document.getElementById('storyViewerWrapper').style.display = 'none';
+        loadStories(); // Ring renklerini güncellemek için
+    }
+
+    async function deleteStory(storyId, mediaUrl) {
+        if(!confirm("Bu hikayeyi silmek istediğine emin misin?")) return;
+        await supabaseClient.from('social_stories').delete().eq('id', storyId);
+        const pathIdx = mediaUrl.indexOf("social_uploads/");
+        if(pathIdx !== -1) await supabaseClient.storage.from('social_uploads').remove([mediaUrl.substring(pathIdx + 15)]);
+        closeStoryViewer();
+    }
+
+    async function sendStoryReply(receiverId, mediaUrl) {
+        const input = document.getElementById('storyReplyInput'); const text = input.value.trim(); if(!text) return;
+        input.value = 'Gönderiliyor...'; input.disabled = true;
+        await supabaseClient.from('social_dm').insert([{ sender_id: currentUser.id, receiver_id: receiverId, message_text: text, media_url: mediaUrl }]);
+        input.value = 'Gönderildi!'; setTimeout(() => { closeStoryViewer(); }, 900);
+    }
+
+    /* ─── YENİ ZENGİNLEŞTİRİLMİŞ SEÇENEKLER (...) MENÜSÜ ────────────────────────────── */
+    let optPostId = null; let optMediaUrl = null;
+    
+    function showPostOptions(postId, postUserId, mediaUrl) {
+        optPostId = postId; optMediaUrl = mediaUrl;
+        document.getElementById('optionsModal').style.display = 'flex';
+        
+        const delBtn = document.getElementById('optDeleteBtn');
+        if (postUserId === currentUser.id) { delBtn.style.display = 'flex'; } else { delBtn.style.display = 'none'; }
+
+        const postCard = document.getElementById(`post-${postId}`);
+        const likeIcon = postCard ? postCard.querySelector('.heart-icon') : null;
+        const saveIcon = postCard ? postCard.querySelector('.save-icon') : null;
+        const optLikeBtn = document.getElementById('optLikeBtn');
+        const optSaveBtn = document.getElementById('optSaveBtn');
+
+        if(likeIcon && likeIcon.classList.contains('liked')) {
+            optLikeBtn.innerHTML = `<i data-feather="heart" style="color:var(--accent-red); fill:var(--accent-red);"></i> Beğenmekten Vazgeç`;
+        } else {
+            optLikeBtn.innerHTML = `<i data-feather="heart"></i> Beğen`;
+        }
+
+        if(saveIcon && saveIcon.classList.contains('saved')) {
+            optSaveBtn.innerHTML = `<i data-feather="bookmark" style="color:white; fill:white;"></i> Kaydedilenlerden Çıkar`;
+        } else {
+            optSaveBtn.innerHTML = `<i data-feather="bookmark"></i> Kaydet`;
+        }
+        feather.replace();
+    }
+
+    function optToggleLike() {
+        const postCard = document.getElementById(`post-${optPostId}`);
+        if(postCard) toggleLike(optPostId, postCard.querySelector('.heart-icon'));
+        document.getElementById('optionsModal').style.display = 'none';
+    }
+
+    function optOpenComment() {
+        document.getElementById('optionsModal').style.display = 'none'; openPostDetail(optPostId);
+    }
+
+    function optToggleSave() {
+        const postCard = document.getElementById(`post-${optPostId}`);
+        if(postCard) toggleBookmark(optPostId, postCard.querySelector('.save-icon'));
+        document.getElementById('optionsModal').style.display = 'none';
+    }
+
+    function optShare() {
+        document.getElementById('optionsModal').style.display = 'none'; openPostShareModal(optPostId, optMediaUrl);
+    }
+
+    async function optDeletePost() {
+        if(!confirm("Gönderiyi silmek istediğine emin misin?")) return; 
+        document.getElementById('optionsModal').style.display = 'none';
+        await supabaseClient.from('social_posts').delete().eq('id', optPostId);
+        const pathIdx = optMediaUrl.indexOf("social_uploads/"); 
+        if(pathIdx !== -1) await supabaseClient.storage.from('social_uploads').remove([optMediaUrl.substring(pathIdx + 15)]);
+        document.getElementById(`post-${optPostId}`)?.remove(); 
+        if(document.getElementById('profileSection').classList.contains('active')) openProfile(currentUser.id);
+    }
+
+    /* ─── YÜKLEME VE HİKAYE SÜRESİ (DURATION) ────────────────────────────── */
+    document.getElementById('postType').addEventListener('change', function() {
+        document.getElementById('exploreToggleWrap').style.display = this.value === 'story' ? 'none' : 'flex';
+        document.getElementById('storyDurationWrap').style.display = this.value === 'story' ? 'flex' : 'none';
+    });
+
+    function previewMedia(e) {
+        const f = e.target.files[0]; if(!f) return; const url = URL.createObjectURL(f);
+        if(f.type.startsWith('video/')) {
+            document.getElementById('mediaPreview').style.display='none'; document.getElementById('mediaPreviewVideo').src=url; document.getElementById('mediaPreviewVideo').style.display='block';
+        } else {
+            document.getElementById('mediaPreviewVideo').style.display='none'; document.getElementById('mediaPreview').src=url; document.getElementById('mediaPreview').style.display='block';
+        }
+    }
+
+    async function uploadAndShare() {
+        const f = document.getElementById('mediaUpload').files[0]; if(!f) return alert("Dosya seçin!");
+        const btn = document.getElementById('btnShare'); btn.innerText = "Yükleniyor..."; btn.disabled = true;
+        try {
+            const path = `${currentUser.id}/${Date.now()}.${f.name.split('.').pop()}`; await supabaseClient.storage.from('social_uploads').upload(path, f);
+            const { data: { publicUrl } } = supabaseClient.storage.from('social_uploads').getPublicUrl(path);
+            
+            const t = document.getElementById('postType').value; 
+            const isExploreVisible = document.getElementById('postExplore').checked;
+            const duration = document.getElementById('storyDuration').value; // Süre seçeneği
+            
+            if (t === 'story') { 
+                let exp = new Date(); exp.setHours(exp.getHours() + 24); 
+                await supabaseClient.from('social_stories').insert([{ user_id: currentUser.id, media_url: publicUrl, expires_at: exp.toISOString(), duration_seconds: parseInt(duration) }]); 
+            } 
+            else { await supabaseClient.from('social_posts').insert([{ user_id: currentUser.id, post_type: t, media_url: publicUrl, caption: document.getElementById('postCaption').value, is_explore_visible: isExploreVisible }]); }
+            document.getElementById('shareModal').style.display = 'none'; if(t === 'story') loadStories(); else loadFeed();
+        } catch (err) { alert("Hata: " + err.message); } finally { btn.innerText = "Paylaş"; btn.disabled = false; }
+    }
+
+    /* ─── DİĞER FONKSİYONLAR (DM, Profil, Reeller Aynen Korundu) ────────────── */
+    async function loadReels() {
+        const cont = document.getElementById('reelsContainer'); cont.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>`; feather.replace();
+        const { data: reels } = await supabaseClient.from('social_posts').select('*, users(id, ad, username, avatar_url), social_likes(user_id), social_comments(id)').eq('post_type', 'reel').order('created_at', { ascending: false }).limit(10);
+        if (!reels || reels.length === 0) { cont.innerHTML = `<div style="text-align:center; color:white; padding-top:100px;">Henüz Reels videosu yok.</div>`; return; }
+
+        cont.innerHTML = reels.map(r => {
+            const isLiked = r.social_likes.some(l => l.user_id === currentUser.id); const isSaved = mySavedPostIds.includes(r.id);
+            return `<div class="reel-item" id="post-${r.id}">
+                ${r.media_url.includes('.mp4') ? `<video src="${r.media_url}" class="reel-video" autoplay loop muted playsinline onclick="this.muted = !this.muted"></video>` : `<img src="${r.media_url}" class="reel-video" style="object-fit: cover; width: 100%; height: 100%; display: block;">`}
+                <div class="reel-overlay-right">
+                    <div class="reel-action" onclick="toggleLike('${r.id}', this.querySelector('.heart-icon'))"><i data-feather="heart" class="heart-icon ${isLiked?'liked':''}" style="${isLiked?'fill:var(--accent-red);color:var(--accent-red);':''}"></i><span id="likes-count-${r.id}">${r.social_likes.length}</span></div>
+                    <div class="reel-action" onclick="openPostDetail('${r.id}')"><i data-feather="message-circle"></i><span>${r.social_comments.length}</span></div>
+                    <div class="reel-action" onclick="openPostShareModal('${r.id}', '${r.media_url}')"><i data-feather="send"></i></div>
+                    <div class="reel-action" onclick="toggleBookmark('${r.id}', this.querySelector('.save-icon'))"><i data-feather="bookmark" class="save-icon ${isSaved?'saved':''}" style="${isSaved?'fill:white;color:white;':''}"></i></div>
+                    <i data-feather="more-horizontal" style="color:white; cursor:pointer;" onclick="showPostOptions('${r.id}', '${r.user_id}', '${r.media_url}')"></i>
+                </div>
+                <div class="reel-overlay-bottom">
+                    <div class="reel-user-row" onclick="openProfile('${r.user_id}')">${generateAvatar(r.users, 36)}<h4>${r.users.username || r.users.ad}</h4>${r.user_id !== currentUser.id ? `<button style="background:transparent; border:1px solid white; color:white; padding:4px 10px; border-radius:8px; font-size:12px; margin-left:8px; cursor:pointer;" onclick="event.stopPropagation(); toggleFollow('${r.user_id}', this)">Takip Et</button>` : ''}</div>
+                    <div class="reel-caption">${r.caption}</div>
+                </div>
+            </div>`;
+        }).join(''); feather.replace();
+    }
+
+    async function loadDMList() {
+        const list = document.getElementById('dmChatList');
+        const { data } = await supabaseClient.from('social_dm').select('sender_id, receiver_id').or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order('created_at', { ascending: false });
+        if(!data || data.length === 0) { list.innerHTML = '<div style="padding:24px; color:var(--text-muted); text-align:center; font-size:14px;">Henüz mesajın yok.</div>'; return; }
+        let uniqueUsers = new Set(); data.forEach(m => { uniqueUsers.add(m.sender_id === currentUser.id ? m.receiver_id : m.sender_id); });
+        const { data: usersData } = await supabaseClient.from('users').select('id, username, ad, avatar_url').in('id', Array.from(uniqueUsers));
+        list.innerHTML = usersData.map(u => `<div class="dm-user-item" onclick="openDMChat('${u.id}', '${u.username || u.ad}', '${u.avatar_url||''}')">${generateAvatar(u, 44)}<div class="dm-user-name">${u.username || u.ad}</div></div>`).join(''); feather.replace();
+    }
+
+    async function openDMChat(userId, username, avatarUrl) {
+        dmActiveUserId = userId; document.getElementById('dmChatHeader').style.display = 'flex'; document.getElementById('dmInputArea').style.display = 'flex';
+        document.getElementById('dmActiveName').innerText = username; document.getElementById('dmActiveAvatar').innerHTML = generateAvatar({username, avatar_url: avatarUrl}, 38);
+        fetchDMMessages(); setupDMRealtime();
+    }
+
+    async function fetchDMMessages() {
+        if(!dmActiveUserId) return; const cont = document.getElementById('dmMessages'); cont.innerHTML = '<div style="text-align:center; margin:auto;"><i data-feather="loader" class="spin" style="color:var(--text-muted);"></i></div>'; feather.replace();
+        const { data } = await supabaseClient.from('social_dm').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${dmActiveUserId}),and(sender_id.eq.${dmActiveUserId},receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
+        if(!data || data.length === 0) { cont.innerHTML = '<div style="margin:auto; color:var(--text-muted); font-size:14px;">Mesajlaşmaya başla!</div>'; return; }
+        cont.innerHTML = data.map(m => { const isMe = m.sender_id === currentUser.id; let mediaHtml = m.media_url ? `<img src="${m.media_url}" class="chat-media-preview" onclick="window.open('${m.media_url}','_blank')">` : ''; return `<div class="chat-bubble ${isMe ? 'sent' : 'received'}">${mediaHtml}${m.message_text ? `<div>${m.message_text}</div>` : ''}</div>`; }).join('');
+        cont.scrollTop = cont.scrollHeight;
+    }
+
+    async function sendDMMessage() {
+        const input = document.getElementById('dmInput'); const text = input.value.trim(); if(!text || !dmActiveUserId) return;
+        input.value = ''; const cont = document.getElementById('dmMessages'); cont.innerHTML += `<div class="chat-bubble sent"><div>${text}</div></div>`; cont.scrollTop = cont.scrollHeight;
+        await supabaseClient.from('social_dm').insert([{ sender_id: currentUser.id, receiver_id: dmActiveUserId, message_text: text }]);
+    }
+
+    function setupDMRealtime() {
+        if(dmSubscription) supabaseClient.removeChannel(dmSubscription);
+        dmSubscription = supabaseClient.channel('custom-dm-channel').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'social_dm' }, payload => {
+            const m = payload.new; if((m.sender_id === dmActiveUserId && m.receiver_id === currentUser.id)) { let mediaHtml = m.media_url ? `<img src="${m.media_url}" class="chat-media-preview">` : ''; const cont = document.getElementById('dmMessages'); cont.innerHTML += `<div class="chat-bubble received">${mediaHtml}${m.message_text ? `<div>${m.message_text}</div>` : ''}</div>`; cont.scrollTop = cont.scrollHeight; }
+        }).subscribe();
+    }
+
+    function handleSearch(q) {
+        clearTimeout(searchTimeout); const grid = document.getElementById('exploreGrid'); const results = document.getElementById('searchResults');
+        if(q.length < 2) { results.innerHTML=''; grid.style.display='grid'; return; }
+        searchTimeout = setTimeout(async () => {
+            grid.style.display='none'; results.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>'; feather.replace();
+            const { data } = await supabaseClient.from('users').select('*').or(`username.ilike.%${q}%,ad.ilike.%${q}%`).neq('id', currentUser.id).limit(10);
+            if(!data || data.length===0) { results.innerHTML='<div style="color:var(--text-muted);text-align:center;padding:20px;font-size:14px;">Sonuç bulunamadı.</div>'; return; }
+            results.innerHTML = data.map(u => `<div class="search-result-item"><div style="display:flex; gap:12px; align-items:center; cursor:pointer;" onclick="openProfile('${u.id}')">${generateAvatar(u,42)}<div><div style="font-size:14px; font-weight:600;">${u.username || u.ad}</div></div></div>${getFollowBtnHTML(u.id)}</div>`).join(''); feather.replace();
+        }, 500);
+    }
+
+    async function loadExplore() {
+        const { data } = await supabaseClient.from('social_posts').select('*, users(is_private), social_likes(user_id), social_comments(id)').eq('post_type', 'post').eq('is_explore_visible', true).order('created_at', { ascending: false }).limit(21);
+        if(data) {
+            const publicPosts = data.filter(p => !p.users.is_private || myFollowingIds.includes(p.user_id) || p.user_id === currentUser.id);
+            document.getElementById('exploreGrid').innerHTML = publicPosts.map(p => `
+            <div class="grid-item" onclick="openPostDetail('${p.id}')">
+                ${p.media_url.includes('.mp4') ? `<video src="${p.media_url}" muted></video><i data-feather="film" style="position:absolute;top:8px;right:8px;color:white;width:16px;height:16px;"></i>` : `<img src="${p.media_url}">`}
+                <div class="grid-overlay"><span><i data-feather="heart"></i>${p.social_likes.length}</span><span><i data-feather="message-circle"></i>${p.social_comments.length}</span></div>
+            </div>`).join(''); feather.replace();
+        }
+    }
+
+    async function openPostDetail(postId) {
+        currentActivePostId = postId;
+        const { data: p } = await supabaseClient.from('social_posts').select('*, users(id, username, ad, avatar_url), social_likes(user_id)').eq('id', postId).single();
+        if(!p) return;
+        const isLiked = p.social_likes.some(l => l.user_id === currentUser.id);
+        const isSaved = mySavedPostIds.includes(p.id);
+        
+        document.getElementById('pvMedia').innerHTML = p.media_url.includes('.mp4') ? `<video src="${p.media_url}" controls autoplay style="width:100%; max-height:100%; object-fit:contain;"></video>` : `<img src="${p.media_url}" style="width:100%; max-height:100%; object-fit:contain;" ondblclick="triggerDoubleTapLike('${p.id}', this.parentElement)"><i data-feather="heart" class="big-heart-overlay"></i>`;
+        document.getElementById('pvHeader').innerHTML = `<div class="post-user" onclick="openProfile('${p.user_id}'); document.getElementById('postViewModal').style.display='none';">${generateAvatar(p.users, 38)}<div style="font-size:14px; font-weight:600;">${p.users.username || p.users.ad}</div></div>${p.user_id !== currentUser.id ? getFollowBtnHTML(p.user_id) : `<i data-feather="more-horizontal" style="color:var(--text-muted); cursor:pointer; width:20px;" onclick="showPostOptions('${p.id}', '${p.user_id}', '${p.media_url}')"></i>`}`;
+        document.getElementById('pvActions').innerHTML = `<i data-feather="heart" class="heart-icon ${isLiked?'liked':''}" onclick="toggleLike('${p.id}', this)" style="cursor:pointer; width:24px; height:24px; ${isLiked?'fill:var(--accent-red);color:var(--accent-red);':'color:var(--text-main);'}"></i><i data-feather="message-circle" style="cursor:pointer; width:24px; height:24px;"></i><i data-feather="send" style="cursor:pointer; width:24px; height:24px;" onclick="openPostShareModal('${p.id}', '${p.media_url}')"></i><i data-feather="bookmark" class="save-icon ${isSaved?'saved':''}" style="margin-left:auto; cursor:pointer; width:24px; height:24px; ${isSaved?'fill:white;color:white;':''}" onclick="toggleBookmark('${p.id}', this)"></i>`;
+        document.getElementById('pvLikesCount').innerHTML = `<span id="likes-count-${p.id}" style="cursor:pointer;" onclick="showLikes('${p.id}')">${p.social_likes.length}</span> beğenme`;
+        document.getElementById('pvTime').innerText = timeAgo(p.created_at);
+        document.getElementById('postViewModal').style.display = 'flex'; feather.replace();
+        fetchComments(postId, p);
+    }
+
+    async function fetchComments(postId, postObj) {
+        const box = document.getElementById('pvComments'); box.innerHTML = `<div style="text-align:center;"><i data-feather="loader" class="spin" style="color:var(--text-muted);"></i></div>`; feather.replace();
+        const { data: comments } = await supabaseClient.from('social_comments').select('*, users(username, ad, avatar_url)').eq('post_id', postId).order('created_at', { ascending: true });
+        let html = `<div class="comment-item">${generateAvatar(postObj.users, 32)}<div class="comment-text"><strong onclick="openProfile('${postObj.user_id}')">${postObj.users.username || postObj.users.ad}</strong>${postObj.caption}</div></div>`;
+        if(comments) comments.forEach(c => { html += `<div class="comment-item">${generateAvatar(c.users, 32)}<div class="comment-text"><strong onclick="openProfile('${c.user_id}')">${c.users.username || c.users.ad}</strong>${c.comment_text}<div class="comment-meta">${timeAgo(c.created_at)}</div></div></div>`; });
+        box.innerHTML = html;
+    }
+
+    async function submitComment() {
+        const input = document.getElementById('pvCommentInput'); const text = input.value.trim(); if(!text || !currentActivePostId) return; input.value = '';
+        document.getElementById('pvComments').innerHTML += `<div class="comment-item"><div class="avatar-placeholder" style="width:32px;height:32px;font-size:12px;">S</div><div class="comment-text"><strong>Sen</strong>${text}<div class="comment-meta">Az önce</div></div></div>`;
+        document.getElementById('pvComments').scrollTop = document.getElementById('pvComments').scrollHeight;
+        await supabaseClient.from('social_comments').insert([{ post_id: currentActivePostId, user_id: currentUser.id, comment_text: text }]);
+    }
+
+    async function showLikes(postId) {
+        document.getElementById('listModalTitle').innerText = 'Beğenmeler'; const content = document.getElementById('listModalContent'); document.getElementById('listModal').style.display = 'flex'; content.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>'; feather.replace();
+        const { data } = await supabaseClient.from('social_likes').select('users(id, username, ad, avatar_url)').eq('post_id', postId);
+        if (!data || data.length === 0) { content.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:24px;font-size:14px;">Henüz beğeni yok.</div>'; return; }
+        content.innerHTML = data.map(l => `<div class="user-list-item"><div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="openProfile('${l.users.id}'); document.getElementById('listModal').style.display='none';">${generateAvatar(l.users, 40)} <span style="font-size:14px; font-weight:600;">${l.users.username || l.users.ad}</span></div>${l.users.id !== currentUser.id ? getFollowBtnHTML(l.users.id) : ''}</div>`).join(''); feather.replace();
+    }
+
+    async function toggleBookmark(postId, iconEl) {
+        const isSaved = iconEl.classList.contains('saved');
+        if(isSaved) {
+            iconEl.classList.remove('saved'); iconEl.style.fill = 'none'; iconEl.style.color = 'var(--text-main)';
+            mySavedPostIds = mySavedPostIds.filter(id => id !== postId);
+            await supabaseClient.from('social_saves').delete().eq('post_id', postId).eq('user_id', currentUser.id);
+        } else {
+            iconEl.classList.add('saved'); iconEl.style.fill = 'white'; iconEl.style.color = 'white';
+            mySavedPostIds.push(postId);
+            await supabaseClient.from('social_saves').insert([{ post_id: postId, user_id: currentUser.id }]);
+        }
+    }
+
+    async function toggleLike(postId, iconEl) {
+        const isLiked = iconEl.classList.contains('liked');
+        const countEls = document.querySelectorAll(`#likes-count-${postId}`); 
+        if (isLiked) {
+            iconEl.classList.remove('liked'); iconEl.style.fill = ''; iconEl.style.color = '';
+            countEls.forEach(el => el.innerText = parseInt(el.innerText) - 1);
+            await supabaseClient.from('social_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
+        } else {
+            iconEl.classList.add('liked'); iconEl.style.fill = 'var(--accent-red)'; iconEl.style.color = 'var(--accent-red)';
+            countEls.forEach(el => el.innerText = parseInt(el.innerText) + 1);
+            await supabaseClient.from('social_likes').insert([{ post_id: postId, user_id: currentUser.id }]);
+        }
+    }
+
+    async function showFollowersList() {
+        if(!currentViewingProfileId) return; document.getElementById('listModalTitle').innerText = 'Takipçiler'; const content = document.getElementById('listModalContent'); document.getElementById('listModal').style.display = 'flex'; content.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>'; feather.replace();
+        const { data } = await supabaseClient.from('social_follows').select('follower_id, users!social_follows_follower_id_fkey(id, username, ad, avatar_url)').eq('following_id', currentViewingProfileId).eq('status', 'accepted');
+        if(!data || data.length===0) { content.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:24px;font-size:14px;">Takipçi yok.</div>'; return; }
+        const isMe = currentViewingProfileId === currentUser.id;
+        content.innerHTML = data.map(f => `<div class="user-list-item" id="flw-item-${f.users.id}"><div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="openProfile('${f.users.id}'); document.getElementById('listModal').style.display='none';">${generateAvatar(f.users, 40)} <span style="font-size:14px; font-weight:600;">${f.users.username || f.users.ad}</span></div>${isMe ? `<button style="background:transparent;border:1px solid var(--border-strong);color:var(--text-main);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;" onclick="removeFollower('${f.users.id}')">Çıkar</button>` : (f.users.id !== currentUser.id ? getFollowBtnHTML(f.users.id) : '')}</div>`).join(''); feather.replace();
+    }
+
+    async function showFollowingList() {
+        if(!currentViewingProfileId) return; document.getElementById('listModalTitle').innerText = 'Takip Edilenler'; const content = document.getElementById('listModalContent'); document.getElementById('listModal').style.display = 'flex'; content.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>'; feather.replace();
+        const { data } = await supabaseClient.from('social_follows').select('following_id, users!social_follows_following_id_fkey(id, username, ad, avatar_url)').eq('follower_id', currentViewingProfileId).eq('status', 'accepted');
+        if(!data || data.length===0) { content.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:24px;font-size:14px;">Kimseyi takip etmiyor.</div>'; return; }
+        content.innerHTML = data.map(f => `<div class="user-list-item"><div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="openProfile('${f.users.id}'); document.getElementById('listModal').style.display='none';">${generateAvatar(f.users, 40)} <span style="font-size:14px; font-weight:600;">${f.users.username || f.users.ad}</span></div>${f.users.id !== currentUser.id ? getFollowBtnHTML(f.users.id) : ''}</div>`).join(''); feather.replace();
+    }
+
+    async function removeFollower(followerId) {
+        if(!confirm("Bu kişiyi takipçilerinden çıkarmak istediğine emin misin?")) return;
+        await supabaseClient.from('social_follows').delete().eq('follower_id', followerId).eq('following_id', currentUser.id);
+        document.getElementById(`flw-item-${followerId}`)?.remove(); let countEl = document.getElementById('profileStatFollowers'); countEl.innerText = parseInt(countEl.innerText) - 1;
+    }
+
+    function getFollowBtnHTML(userId) {
+        if (myFollowingIds.includes(userId)) return `<button class="btn-follow following follow-btn-${userId}" onclick="handleFollowClick('${userId}')">Takip Ediliyor</button>`;
+        if (myRequestedIds.includes(userId)) return `<button class="btn-follow requested follow-btn-${userId}" onclick="handleFollowClick('${userId}')">İstek Gönderildi</button>`;
+        return `<button class="btn-follow follow-btn-${userId}" onclick="handleFollowClick('${userId}')">Takip Et</button>`;
+    }
+
+    async function handleFollowClick(targetId) {
+        const isFollowing = myFollowingIds.includes(targetId); const isRequested = myRequestedIds.includes(targetId);
+        document.querySelectorAll(`.follow-btn-${targetId}`).forEach(btn => { if (isFollowing || isRequested) { btn.className = `btn-follow follow-btn-${targetId}`; btn.innerText = 'Takip Et'; } else { btn.className = `btn-follow requested follow-btn-${targetId}`; btn.innerText = 'İstek Gönderildi'; } });
+        if (isFollowing || isRequested) {
+            myFollowingIds = myFollowingIds.filter(id => id !== targetId); myRequestedIds = myRequestedIds.filter(id => id !== targetId);
+            await supabaseClient.from('social_follows').delete().eq('follower_id', currentUser.id).eq('following_id', targetId);
+        } else {
+            myRequestedIds.push(targetId); await supabaseClient.from('social_follows').insert([{ follower_id: currentUser.id, following_id: targetId, status: 'pending' }]);
+        }
+        isLoaded.feed = false; 
+    }
+
+    let sharePostData = null;
+    async function openPostShareModal(postId, mediaUrl) {
+        sharePostData = { id: postId, url: mediaUrl }; document.getElementById('postShareModal').style.display = 'flex'; const list = document.getElementById('postShareList'); list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>'; feather.replace();
+        const { data } = await supabaseClient.from('social_follows').select('following_id, users!social_follows_following_id_fkey(id, username, ad, avatar_url)').eq('follower_id', currentUser.id).eq('status', 'accepted');
+        if(!data || data.length===0) { list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:24px;font-size:14px;">Takip ettiğin kimse yok.</div>'; return; }
+        window.cachedDMUsers = data; 
+        list.innerHTML = data.map(f => `<div class="share-user-item dm-user-row" data-name="${(f.users.username||'').toLowerCase()}"><div style="display:flex; align-items:center; gap:12px;">${generateAvatar(f.users, 40)}<div style="font-size:14px; font-weight:600;">${f.users.username || f.users.ad}</div></div><button id="send-post-btn-${f.users.id}" class="send-btn" onclick="sendPostToUser('${f.users.id}')">Gönder</button></div>`).join('');
+    }
+
+    function filterPostShareList(q) {
+        if(!window.cachedDMUsers) return; const query = q.toLowerCase(); document.querySelectorAll('.dm-user-row').forEach(row => { row.style.display = row.getAttribute('data-name').includes(query) ? 'flex' : 'none'; });
+    }
+
+    async function sendPostToUser(targetId) {
+        const btn = document.getElementById(`send-post-btn-${targetId}`); btn.innerText = "Gönderiliyor..."; btn.disabled = true;
+        await supabaseClient.from('social_dm').insert([{ sender_id: currentUser.id, receiver_id: targetId, message_text: "Sana bir gönderi paylaştı.", media_url: sharePostData.url }]);
+        btn.style.background = "transparent"; btn.style.border = "1px solid var(--border-strong)"; btn.style.color = "var(--text-muted)"; btn.innerText = "Gönderildi";
+    }
+
+    async function checkNotifications() {
+        const { data } = await supabaseClient.from('social_follows').select('id').eq('following_id', currentUser.id).eq('status', 'pending');
+        const b = document.getElementById('notifBadge'); if (data && data.length > 0) { b.innerText = data.length; b.style.display = 'inline-block'; } else { b.style.display = 'none'; }
+    }
+
+    async function openNotifications() {
+        document.getElementById('notifModal').style.display = 'flex'; const list = document.getElementById('notifList'); list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);"><i data-feather="loader" class="spin"></i></div>'; feather.replace();
+        const { data } = await supabaseClient.from('social_follows').select('id, follower_id, users!social_follows_follower_id_fkey(username, ad, avatar_url)').eq('following_id', currentUser.id).eq('status', 'pending');
+        if(!data || data.length === 0) { list.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:24px; font-size:14px;">Yeni istek yok.</div>'; return; }
+        list.innerHTML = data.map(r => `<div class="notif-item" id="req-${r.id}"><div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="openProfile('${r.follower_id}'); document.getElementById('notifModal').style.display='none';">${generateAvatar(r.users, 42)}<div style="font-size:14px; font-weight:600;">${r.users.username || r.users.ad}</div></div><div class="notif-actions"><button class="notif-accept" onclick="respondRequest('${r.id}', 'accepted')">Onayla</button><button class="notif-reject" onclick="respondRequest('${r.id}', 'rejected')">Sil</button></div></div>`).join(''); feather.replace();
+    }
+
+    async function respondRequest(id, action) {
+        document.getElementById(`req-${id}`)?.remove();
+        if (action === 'accepted') await supabaseClient.from('social_follows').update({ status: 'accepted' }).eq('id', id); else await supabaseClient.from('social_follows').delete().eq('id', id);
+        checkNotifications();
+    }
+
+    async function openProfile(userId = currentUser.id) {
+        currentViewingProfileId = userId;
+        const { data: user } = await supabaseClient.from('users').select('*').eq('id', userId).single();
+        if(!user) return;
+        
+        document.getElementById('profilePageAvatar').innerHTML = generateAvatar(user, 134);
+        document.getElementById('profilePageName').innerText = user.username || user.ad;
+        document.getElementById('profilePageBio').innerText = user.bio || '';
+        
+        const btnDiv = document.getElementById('profilePageActionBtn');
+        const tabsContainer = document.getElementById('profileTabsContainer');
+
+        if(userId === currentUser.id) {
+            btnDiv.innerHTML = `<button class="btn-secondary" onclick="openEditProfile()" style="padding:8px 16px;">Profili Düzenle</button>`;
+            tabsContainer.innerHTML = `
+                <div class="profile-tab active" id="tabPostsBtn" onclick="switchProfileTab('posts')"><i data-feather="grid"></i> GÖNDERİLER</div>
+                <div class="profile-tab" id="tabSavedBtn" onclick="switchProfileTab('saved')"><i data-feather="bookmark"></i> KAYDEDİLENLER</div>
+            `;
+        } else { 
+            btnDiv.innerHTML = getFollowBtnHTML(userId);
+            tabsContainer.innerHTML = `<div class="profile-tab active"><i data-feather="grid"></i> GÖNDERİLER</div>`;
+        }
+
+        const { count: followers } = await supabaseClient.from('social_follows').select('*', { count:'exact', head:true }).eq('following_id', userId).eq('status', 'accepted');
+        const { count: following } = await supabaseClient.from('social_follows').select('*', { count:'exact', head:true }).eq('follower_id', userId).eq('status', 'accepted');
+        document.getElementById('profileStatFollowers').innerText = followers || 0;
+        document.getElementById('profileStatFollowing').innerText = following || 0;
+
+        const isMe = userId === currentUser.id;
+        const isApprovedFollower = myFollowingIds.includes(userId);
+        const grid = document.getElementById('profileGrid');
+
+        if (user.is_private && !isMe && !isApprovedFollower) {
+            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+                <i data-feather="lock" style="width:36px;height:36px;margin-bottom:16px;opacity:0.4;"></i>
+                <p style="font-size:15px; font-weight:600;">Bu hesap gizli</p>
+                <p style="font-size:13px; margin-top:6px;">Gönderileri görmek için takip et.</p>
+            </div>`;
+            document.getElementById('profileStatPosts').innerText = "0";
+        } else {
+            loadProfilePosts(userId);
+        }
+
+        switchTab('profile'); feather.replace();
+    }
+
+    async function openEditProfile() {
+        const { data } = await supabaseClient.from('users').select('ad, bio, is_private').eq('id', currentUser.id).single();
+        if(data) {
+            document.getElementById('editName').value = data.ad || '';
+            document.getElementById('editBio').value = data.bio || '';
+            document.getElementById('editIsPrivate').checked = data.is_private || false;
+            document.getElementById('editProfileModal').style.display = 'flex';
+        }
+    }
+
+    async function saveProfile() {
+        const ad = document.getElementById('editName').value;
+        const bio = document.getElementById('editBio').value;
+        const is_private = document.getElementById('editIsPrivate').checked;
+        const btn = document.getElementById('btnSaveProfile');
+        btn.innerText = "Kaydediliyor..."; btn.disabled = true;
+        await supabaseClient.from('users').update({ ad, bio, is_private }).eq('id', currentUser.id);
+        btn.innerText = "Kaydedildi"; btn.disabled = false;
+        setTimeout(() => { document.getElementById('editProfileModal').style.display = 'none'; openProfile(); }, 800);
+    }
+
+    async function loadProfilePosts(userId) {
+        const grid = document.getElementById('profileGrid');
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;"><i data-feather="loader" class="spin"></i></div>'; feather.replace();
+        const { data: posts } = await supabaseClient.from('social_posts').select('*, social_likes(user_id), social_comments(id)').eq('user_id', userId).order('created_at', { ascending: false });
+        document.getElementById('profileStatPosts').innerText = posts ? posts.length : 0;
+        grid.innerHTML = posts && posts.length > 0 
+            ? posts.map(p => `<div class="grid-item" onclick="openPostDetail('${p.id}')">${p.media_url.includes('.mp4') ? `<video src="${p.media_url}" muted></video><i data-feather="film" style="position:absolute;top:8px;right:8px;color:white;width:16px;"></i>` : `<img src="${p.media_url}">`}<div class="grid-overlay"><span><i data-feather="heart"></i>${p.social_likes.length}</span></div></div>`).join('') 
+            : '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);font-size:14px;">Gönderi Yok</div>';
+        feather.replace();
+    }
+
+    async function loadSavedPosts() {
+        const grid = document.getElementById('profileGrid');
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;"><i data-feather="loader" class="spin"></i></div>'; feather.replace();
+        const { data: saves } = await supabaseClient.from('social_saves').select('social_posts(*, social_likes(user_id), social_comments(id))').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+        if(!saves || saves.length === 0) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);font-size:14px;">Henüz kaydedilmiş gönderi yok.</div>'; return; }
+        grid.innerHTML = saves.map(s => { const p = s.social_posts; if(!p) return ''; return `<div class="grid-item" onclick="openPostDetail('${p.id}')">${p.media_url.includes('.mp4') ? `<video src="${p.media_url}" muted></video><i data-feather="film" style="position:absolute;top:8px;right:8px;color:white;width:16px;"></i>` : `<img src="${p.media_url}">`}<div class="grid-overlay"><span><i data-feather="heart"></i>${p.social_likes.length}</span></div></div>`; }).join('');
+        feather.replace();
+    }
+
+    function switchProfileTab(tabName) {
+        document.getElementById('tabPostsBtn').classList.remove('active'); document.getElementById('tabSavedBtn').classList.remove('active');
+        if(tabName === 'posts') { document.getElementById('tabPostsBtn').classList.add('active'); loadProfilePosts(currentUser.id); } 
+        else { document.getElementById('tabSavedBtn').classList.add('active'); loadSavedPosts(); }
+    }
+</script>
+</body>
+</html>

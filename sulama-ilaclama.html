@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriSynth - Sulama & İlaçlama</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const savedTheme = localStorage.getItem('AgriSynth-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+    <link rel="stylesheet" href="sulama-ilaclama.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand"><i data-feather="leaf"></i><span>AgriSynth</span></div>
+        <div class="nav-menu">
+            <a href="ciftci.html" class="nav-item"><i data-feather="arrow-left"></i><span>Panele Dön</span></a>
+            <div class="nav-item active"><i data-feather="droplet"></i><span>Sulama & İlaçlama</span></div>
+            <a href="yemleme-saglik.html" class="nav-item"><i data-feather="heart"></i><span>Yemleme & Sağlık</span></a>
+        </div>
+    </aside>
+
+    <main class="content-area">
+        <div class="page-header">
+            <div><h1>Bitki Bakım Merkezi</h1><p>Arazilerinizdeki ağaç ve mahsullerin sulama, gübreleme ve ilaçlama takibini yapın.</p></div>
+        </div>
+
+        <div id="loadingStatus" style="text-align:center; padding:40px; color:var(--info);">
+            <i data-feather="loader" style="animation: spin 1s linear infinite;"></i> Yükleniyor...
+        </div>
+
+        <div id="fieldsContainer"></div>
+    </main>
+
+    <div class="modal-overlay" id="actionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;" id="modalTitle">İşlem Ekle</h2>
+                <button style="background:transparent;border:none;color:var(--text-muted);" onclick="closeModal()"><i data-feather="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="selectedFieldId">
+                <input type="hidden" id="selectedTreeType">
+                
+                <div class="form-group">
+                    <label>İşlem Türü</label>
+                    <select id="actType" class="form-select">
+                        <option value="Sulama">Sulama</option>
+                        <option value="İlaçlama">İlaçlama</option>
+                        <option value="Gübreleme">Gübreleme</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>İşlem Tarihi</label>
+                    <input type="date" id="actDate" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Detaylar (Kullanılan ilaç, su miktarı vb.)</label>
+                    <input type="text" id="actDetails" class="form-input" placeholder="Örn: Kök kurdu ilacı atıldı, ağaç başı 50L su...">
+                </div>
+
+                <div class="form-group">
+                    <label>Bir Sonraki İşlem / Hatırlatma Tarihi (Opsiyonel)</label>
+                    <input type="date" id="actNextDate" class="form-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">İptal</button>
+                <button class="btn-primary" onclick="saveActivity()"><i data-feather="check" style="width:16px;"></i> Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="sulama-ilaclama.js"></script>
+</body>
+</html>

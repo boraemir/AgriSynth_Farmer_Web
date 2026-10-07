@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriSynth - Veteriner Randevuları</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        (function(){
+            emailjs.init("zlxQfo5ypnKT6ZyhV"); 
+        })();
+    </script>
+
+    <script>
+        const savedTheme = localStorage.getItem('AgriSynth-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+    <style>
+        /* --- MODERN TEMA RENKLERİ --- */
+        :root {
+            --bg: #f8fafc; --surface: #ffffff; --surface-hover: #f1f5f9;
+            --border: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b;
+            --primary: #10b981; --primary-hover: #059669; --info: #0ea5e9; 
+            --success: #22c55e; --warning: #f59e0b; --danger: #ef4444;
+            --modal-bg: rgba(15, 23, 42, 0.6);
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 20px 35px -5px rgba(16, 185, 129, 0.15);
+            --radius: 16px;
+        }
+        
+        [data-theme="dark"] {
+            --bg: #0f172a; --surface: #1e293b; --surface-hover: #334155;
+            --border: #334155; --text-main: #f8fafc; --text-muted: #94a3b8;
+            --modal-bg: rgba(0, 0, 0, 0.8);
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 20px 35px -5px rgba(16, 185, 129, 0.25);
+        }
+
+        /* --- MOBİL UYGULAMA HİSSİYATI --- */
+        html { -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior-y: none; font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: background-color 0.3s, color 0.3s; margin: 0; padding: 0;}
+        button, a, .nav-item, .card, .loc-card { touch-action: manipulation; }
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
+        /* --- LAYOUT & SIDEBAR --- */
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 20px; z-index: 100; transition: all 0.3s ease; box-shadow: var(--shadow-sm);}
+        .sidebar-brand { font-size: 22px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 10px; margin-bottom: 40px; padding-left: 10px; letter-spacing: -0.5px;}
+        .sidebar-brand i { color: var(--primary); }
+        
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 12px; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s ease; text-decoration: none;}
+        .nav-item:hover { background: var(--surface-hover); color: var(--text-main); transform: translateX(4px);}
+        .nav-item.active { background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(5,150,105,0.1) 100%); color: var(--primary); box-shadow: inset 3px 0 0 var(--primary); }
+        
+        .content-area { flex: 1; overflow-y: auto; padding: 0 40px 50px 40px; scrollbar-width: thin; }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: 70px; flex-direction: row; justify-content: space-around; padding: 10px 0; border-right: none; border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 0; z-index: 1000; background: var(--surface); box-shadow: 0 -4px 10px rgba(0,0,0,0.05); }
+            .sidebar-brand { display: none; }
+            .nav-menu { flex-direction: row; justify-content: flex-start; width: 100%; gap: 5px; overflow-x: auto; padding: 0 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            .nav-menu::-webkit-scrollbar { display: none; }
+            .nav-item { flex-direction: column; gap: 4px; padding: 8px 12px; border-radius: 8px; flex: 0 0 auto; min-width: 65px; justify-content: center; font-size: 11px; }
+            .nav-item span { display: none; }
+            .nav-item.active { box-shadow: none; background: rgba(16,185,129,0.1); }
+            .content-area { padding: 20px 20px 90px 20px; } 
+        }
+
+        /* --- MODERN HEADER --- */
+        .page-header { margin-bottom: 35px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px; margin-top: 40px;}
+        .page-header h1 { font-size: 32px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
+        .page-header p { color: var(--text-muted); font-size: 15px; font-weight: 400;}
+        
+        /* --- ŞIK BUTONLAR --- */
+        .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%); color: #fff; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content:center; gap: 8px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px; box-shadow: 0 4px 12px rgba(16,185,129,0.3);}
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(16,185,129,0.4); }
+        .btn-secondary { background: var(--surface-hover); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition: all 0.2s; font-size: 14px;}
+        .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* --- SEKMELER (TABS) --- */
+        .tabs { display: flex; gap: 8px; background: var(--surface); padding: 6px; border-radius: 14px; border: 1px solid var(--border); width: fit-content; box-shadow: var(--shadow-sm); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; } 
+        .tab-btn { background: transparent; border: none; color: var(--text-muted); font-weight: 600; font-size: 14px; padding: 10px 20px; border-radius: 10px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+
+        /* --- ARAMA ÇUBUĞU --- */
+        .search-box { display: flex; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 0 16px; flex: 1; max-width: 450px; transition: all 0.3s; box-shadow: var(--shadow-sm);}
+        .search-box:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        .search-box input { border: none; padding: 14px; font-size: 14px; width: 100%; background: transparent; color: var(--text-main); font-family: inherit; outline: none; }
+        .search-box i { color: var(--text-muted); width: 18px;}
+
+        /* --- HAVALI KARTLAR --- */
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0; box-shadow: var(--shadow); display: flex; flex-direction: column; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; position: relative;}
+        .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-hover); border-color: rgba(16,185,129,0.3);}
+        
+        .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: transparent; transition: 0.3s; }
+        .card.status-pending::before { background: var(--warning); }
+        .card.status-approved::before { background: var(--success); }
+        .card.status-rejected::before { background: var(--danger); }
+
+        .doc-header { display: flex; align-items: center; gap: 15px; padding: 20px; background: linear-gradient(to right, var(--surface), var(--surface-hover)); border-bottom: 1px solid var(--border); }
+        .doc-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--info), #0284c7); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; box-shadow: var(--shadow-sm); flex-shrink:0;}
+        .doc-info h3 { font-size: 17px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;}
+        .doc-info p { font-size: 13px; color: var(--text-muted); }
+        
+        .card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+        .apt-status { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 15px; width: fit-content;}
+        .status-pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
+        .status-approved { background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
+        .status-rejected { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+        
+        .apt-detail-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); margin-bottom: 10px;}
+        .apt-detail-label { color: var(--text-muted); display: flex; align-items: center; gap: 6px; font-weight: 500;}
+        .apt-detail-value { color: var(--text-main); font-weight: 600; }
+        .apt-detail-row i { width: 14px; height: 14px; color: var(--primary); }
+
+        .card-actions { padding: 15px 20px; background: var(--bg); border-top: 1px solid var(--border); display: flex; gap: 10px; }
+
+        /* --- MODAL VE FORMLAR --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--modal-bg); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.3s; padding: 20px; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content { background: var(--surface); width: 100%; max-width: 650px; max-height: 90vh; border-radius: 24px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.34,1.5,0.64,1); }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface); }
+        .modal-body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;}
+        .modal-footer { padding: 20px 24px; border-top: 1px solid var(--border); background: var(--surface-hover); display: flex; justify-content: flex-end; gap: 12px; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-label { font-size: 13px; font-weight: 600; color: var(--text-main); }
+        .form-input, .form-select { background: var(--surface-hover); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text-main); font-family: inherit; font-size: 14px; width: 100%; transition: all 0.2s;}
+        .form-input:focus, .form-select:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        
+        /* Lokasyon Seçim Kartları */
+        .location-options { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 5px; }
+        .loc-card { border: 2px solid var(--border); border-radius: 16px; padding: 18px; cursor: pointer; text-align: center; transition: all 0.2s; background: var(--surface); }
+        .loc-card.selected { border-color: var(--primary); background: rgba(16, 185, 129, 0.05); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16,185,129,0.1); }
+        .loc-card i { color: var(--text-muted); margin-bottom: 10px; width: 28px; height: 28px; transition: color 0.2s;}
+        .loc-card.selected i { color: var(--primary); }
+        .loc-card h4 { font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;}
+        .loc-card p { font-size: 12px; color: var(--text-muted); line-height: 1.4;}
+
+        /* Dinamik Hayvan Satırı */
+        .dynamic-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; background: var(--surface-hover); padding: 16px; border-radius: 16px; border: 1px dashed var(--border);}
+        .btn-remove { background: rgba(239,68,68,0.1); color: var(--danger); border: none; padding: 10px; border-radius: 10px; cursor: pointer; display:flex; align-items:center; height: 48px; transition: 0.2s;}
+        .btn-remove:hover { background: var(--danger); color: white;}
+
+        /* Doktor Profil İnceleme Modalı Özel */
+        .profile-cover { width: 100%; height: 160px; background: linear-gradient(135deg, var(--primary), var(--info)); position: relative;}
+        .profile-avatar { width: 88px; height: 88px; border-radius: 50%; background: var(--surface); color: var(--primary); font-size: 36px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 4px solid var(--surface); position: absolute; bottom: -44px; left: 24px; box-shadow: var(--shadow);}
+        .profile-content { padding: 60px 24px 24px 24px; }
+        .profile-title { font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;}
+        .profile-subtitle { font-size: 14px; color: var(--text-muted); display:flex; align-items:center; gap:5px; margin-bottom: 24px;}
+        .profile-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; background: var(--surface-hover); border-radius: 16px; padding: 20px; border: 1px solid var(--border);}
+        .stat-item { display: flex; flex-direction: column; gap: 4px; }
+        .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;}
+        .stat-value { font-size: 15px; color: var(--text-main); font-weight: 600;}
+
+        /* --- ŞIK TOAST BİLDİRİMLERİ --- */
+        .toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 15px 35px -5px rgba(0,0,0,0.15); transform: translateX(120%); opacity: 0; transition: all 0.4s cubic-bezier(0.34,1.4,0.64,1); width: max-content; max-width: 400px; pointer-events: auto;}
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast i { width: 22px; height: 22px; }
+        .toast.success i { color: var(--success); }
+        .toast.error i { color: var(--danger); }
+        .toast.info i { color: var(--info); }
+        .toast span { font-size: 14px; font-weight: 600; color: var(--text-main); line-height: 1.4;}
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand"><i data-feather="leaf"></i><span>AgriSynth</span></div>
+        <div class="nav-menu">
+            <a href="ciftci.html" class="nav-item"><i data-feather="arrow-left"></i><span>Panele Dön</span></a>
+            <div class="nav-item active"><i data-feather="calendar"></i><span>Veteriner Randevusu</span></div>
+        </div>
+    </aside>
+
+    <main class="content-area">
+        <div class="page-header">
+            <div>
+                <h1>Veteriner Randevusu</h1>
+                <p>Uzman hekimlerden destek alın veya randevularınızı takip edin.</p>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+            <div class="tabs" style="margin-bottom: 0;">
+                <button class="tab-btn active" onclick="switchView('doctors', this)">Hekim Bul</button>
+                <button class="tab-btn" onclick="switchView('my_appointments', this)">Randevularım</button>
+            </div>
+            
+            <div class="search-box" id="searchBoxContainer">
+                <i data-feather="search"></i>
+                <input type="text" id="searchInput" placeholder="Doktor adı, uzmanlık veya şehir ara..." onkeyup="filterDoctors()">
+            </div>
+        </div>
+
+        <div id="loadingStatus" style="text-align:center; padding:60px; color:var(--primary); display:none; font-weight: 600; font-size: 15px;">
+            <i data-feather="loader" style="animation: spin 1s linear infinite; margin-bottom: 10px; width: 32px; height: 32px;"></i><br>
+            Yükleniyor...
+        </div>
+
+        <div id="contentContainer" class="grid-container"></div>
+    </main>
+
+    <div class="modal-overlay" id="profileModal" onclick="if(event.target===this) closeProfileModal()">
+        <div class="modal-content" style="overflow: visible;">
+            <div class="modal-header" style="border:none; position:absolute; right:0; z-index:10; background:transparent;">
+                <button class="btn-secondary" style="border:none; padding:8px; background:rgba(255,255,255,0.9); border-radius:50%;" onclick="closeProfileModal()"><i data-feather="x"></i></button>
+            </div>
+            
+            <div class="profile-cover">
+                <div class="profile-avatar" id="profAvatar">D</div>
+            </div>
+            
+            <div class="profile-content">
+                <div class="profile-title" id="profName">Dr. İsim Soyisim</div>
+                <div class="profile-subtitle"><i data-feather="map-pin" style="width:14px;"></i> <span id="profCity">Şehir</span></div>
+                
+                <div class="profile-stats-grid">
+                    <div class="stat-item"><span class="stat-label">Uzmanlık Alanı</span><span class="stat-value" id="profExp">Belirtilmemiş</span></div>
+                    <div class="stat-item"><span class="stat-label">Deneyim</span><span class="stat-value" id="profTime">Belirtilmemiş</span></div>
+                    <div class="stat-item"><span class="stat-label">Klinik Adı</span><span class="stat-value" id="profClinic">Belirtilmemiş</span></div>
+                    <div class="stat-item"><span class="stat-label">Muayene Başlangıç</span><span class="stat-value" id="profPrice" style="color:var(--primary); font-weight:700;">Belirtilmemiş</span></div>
+                </div>
+
+                <div style="font-size:14px; color:var(--text-muted); line-height:1.6; margin-bottom:30px;" id="profDesc">
+                    Hakkında detayı bulunmuyor.
+                </div>
+
+                <div style="display:flex; gap:12px; justify-content:flex-end;">
+                    <button class="btn-secondary" onclick="closeProfileModal()">Vazgeç</button>
+                    <button class="btn-primary" id="btnProfileToApt"><i data-feather="calendar" style="width:16px;"></i> Randevu Al</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="appointmentModal" onclick="if(event.target===this) closeModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle" style="font-size: 20px; font-weight: 700;">Randevu Al - Dr. İsim</h2>
+                <button class="btn-secondary" style="border:none; padding:6px; background:transparent;" onclick="closeModal()"><i data-feather="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="appointmentForm">
+                    <input type="hidden" id="selectedDoctorId">
+                    
+                    <label class="form-label" style="margin-bottom:8px; display:block;">Randevu Türü</label>
+                    <div class="location-options">
+                        <div class="loc-card selected" id="loc-farm" onclick="selectLocation('farm')">
+                            <i data-feather="truck"></i>
+                            <h4>Çiftliğe Gelsin</h4>
+                            <p>Hekim adresinize ziyaret sağlar.</p>
+                        </div>
+                        <div class="loc-card" id="loc-clinic" onclick="selectLocation('clinic')">
+                            <i data-feather="home"></i>
+                            <h4>Kliniğe Gideceğim</h4>
+                            <p>Siz kliniğe hayvanları götürürsünüz.</p>
+                        </div>
+                    </div>
+                    <input type="hidden" id="appointmentLocation" value="farm">
+
+                    <div class="form-row" style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label class="form-label">Tarih</label>
+                            <input type="date" id="aptDate" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Saat Seçimi</label>
+                            <input type="time" id="aptTime" class="form-input" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                            Müdahale Edilecek Hayvanlar
+                        </label>
+                        <div id="animalContainer"></div>
+                        <button type="button" class="btn-secondary" style="width: fit-content;" onclick="addAnimalRow()"><i data-feather="plus" style="width:16px;"></i> Yeni Hayvan Ekle</button>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label class="form-label">Ek Not / Adres Tarifi</label>
+                        <textarea id="aptNotes" class="form-input" rows="2" placeholder="Doktorun bilmesi gereken ekstra durumlar veya adres detayı..." style="resize:vertical;"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">İptal</button>
+                <button class="btn-primary" onclick="saveAppointment()" id="saveAptBtn"><i data-feather="check"></i> Randevuyu Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="ciftci-randevu.js"></script>
+</body>
+</html>

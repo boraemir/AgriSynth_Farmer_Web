@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriSynth - Yemleme & Sağlık</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const savedTheme = localStorage.getItem('AgriSynth-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+    <style>
+        :root {
+            --bg: #f8fafc; --surface: #ffffff; --surface-hover: #f1f5f9;
+            --border: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b;
+            --primary: #10b981; --info: #0ea5e9; --danger: #ef4444; --warning: #f59e0b;
+            --modal-bg: rgba(15, 23, 42, 0.6);
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a; --surface: #1e293b; --surface-hover: #334155;
+            --border: #334155; --text-main: #f8fafc; --text-muted: #94a3b8;
+            --modal-bg: rgba(0, 0, 0, 0.8);
+        }
+
+        html { -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior-y: none; margin: 0; font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: 0.3s; }
+        button, a { touch-action: manipulation; }
+
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 20px; z-index: 100; transition: all 0.3s ease; }
+        .sidebar-brand { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 40px; padding-left: 10px;}
+        .sidebar-brand i { color: var(--danger); }
+        .nav-menu { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; color: var(--text-muted); font-weight: 500; cursor: pointer; text-decoration: none;}
+        .nav-item:hover { background: var(--surface-hover); color: var(--text-main); }
+        .nav-item.active { background: rgba(239, 68, 68, 0.1); color: var(--danger); font-weight: 600; }
+
+        .content-area { flex: 1; overflow-y: auto; padding: 30px; }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: 70px; flex-direction: row; padding: 10px 0; border-right: none; border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 0; z-index: 1000; }
+            .sidebar-brand { display: none; }
+            .nav-menu { flex-direction: row; justify-content: flex-start; width: 100%; gap: 5px; overflow-x: auto; padding: 0 10px; scrollbar-width: none; }
+            .nav-menu::-webkit-scrollbar { display: none; }
+            .nav-item { flex-direction: column; gap: 4px; padding: 8px 12px; border-radius: 8px; flex: 0 0 auto; min-width: 65px; justify-content: center; font-size: 11px; }
+            .nav-item span { display: none; }
+            .content-area { padding: 15px 15px 85px 15px; } 
+        }
+
+        .page-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
+        .page-header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+        .btn-primary { background: var(--danger); color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px;}
+        .btn-secondary { background: var(--surface-hover); color: var(--text-main); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px;}
+
+        /* Araziler ve Hayvanlar */
+        .field-group { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 20px; overflow: hidden; }
+        .field-header { background: var(--surface-hover); padding: 15px 20px; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; border-bottom: 1px solid var(--border);}
+        .tree-row { padding: 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 15px; }
+        .tree-row:last-child { border-bottom: none; }
+        .tree-info { display: flex; justify-content: space-between; align-items: center; }
+        .tree-name { font-size: 16px; font-weight: 600; color: var(--danger); display: flex; align-items: center; gap: 8px;}
+        
+        .history-box { background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; padding: 10px; }
+        .history-item { font-size: 13px; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .history-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+        .bg-yem { background: rgba(34,197,94,0.1); color: var(--success); }
+        .bg-saglik { background: rgba(239,68,68,0.1); color: var(--danger); }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--modal-bg); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--surface); width: 100%; max-width: 500px; border-radius: 20px; overflow: hidden; }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 15px;}
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-input, .form-select { background: var(--bg); border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: var(--text-main); font-family: inherit; }
+        .modal-footer { padding: 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: var(--surface-hover);}
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand"><i data-feather="leaf"></i><span>AgriSynth</span></div>
+        <div class="nav-menu">
+            <a href="ciftci.html" class="nav-item"><i data-feather="arrow-left"></i><span>Panele Dön</span></a>
+            <a href="sulama-ilaclama.html" class="nav-item"><i data-feather="droplet"></i><span>Sulama & İlaçlama</span></a>
+            <div class="nav-item active"><i data-feather="heart"></i><span>Yemleme & Sağlık</span></div>
+        </div>
+    </aside>
+
+    <main class="content-area">
+        <div class="page-header">
+            <div><h1>Hayvan Sağlık Merkezi</h1><p>Sürünüzün yemleme, aşı ve veteriner takibini buradan yönetin.</p></div>
+        </div>
+
+        <div id="loadingStatus" style="text-align:center; padding:40px; color:var(--danger);">
+            <i data-feather="loader" style="animation: spin 1s linear infinite;"></i> Yükleniyor...
+        </div>
+
+        <div id="fieldsContainer"></div>
+    </main>
+
+    <div class="modal-overlay" id="actionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;" id="modalTitle">İşlem Ekle</h2>
+                <button style="background:transparent;border:none;color:var(--text-muted);" onclick="closeModal()"><i data-feather="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="selectedFieldId">
+                <input type="hidden" id="selectedAnimalType">
+                
+                <div class="form-group">
+                    <label>İşlem Türü</label>
+                    <select id="actType" class="form-select">
+                        <option value="Yemleme">Yemleme / Rasyon</option>
+                        <option value="Sağlık / Aşı">Sağlık / Aşı / İlaç</option>
+                        <option value="Veteriner Kontrolü">Veteriner Kontrolü</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Tarih</label>
+                    <input type="date" id="actDate" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Detaylar (Hangi yem verildi, hangi aşı vuruldu vb.)</label>
+                    <input type="text" id="actDetails" class="form-input" placeholder="Örn: Şap aşısı yapıldı...">
+                </div>
+
+                <div class="form-group">
+                    <label>Bir Sonraki İşlem / Kontrol Tarihi (Opsiyonel)</label>
+                    <input type="date" id="actNextDate" class="form-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">İptal</button>
+                <button class="btn-primary" onclick="saveActivity()"><i data-feather="check" style="width:16px;"></i> Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="yemleme-saglik.js"></script>
+</body>
+</html>

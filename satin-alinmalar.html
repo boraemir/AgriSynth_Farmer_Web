@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriSynth - Alışverişlerim</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>(function(){ const t=localStorage.getItem('AgriSynth-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();</script>
+    <style>
+        :root {
+            --bg:#f8fafc; --surface:#fff; --surface-2:#f1f5f9; --border:#e2e8f0;
+            --text-main:#0f172a; --text-muted:#64748b;
+            --primary:#10b981; --primary-hover:#059669; --primary-dim:rgba(16,185,129,0.08);
+            --danger:#ef4444; --warning:#f59e0b; --info:#3b82f6;
+            --shadow:0 4px 16px rgba(0,0,0,0.06); --shadow-lg:0 12px 32px rgba(0,0,0,0.12);
+            --radius:18px; --navbar-h:68px; --transition:all 0.2s ease;
+        }
+        [data-theme="dark"] {
+            --bg:#0f172a; --surface:#1e293b; --surface-2:#334155; --border:#334155;
+            --text-main:#f1f5f9; --text-muted:#94a3b8;
+            --primary-dim:rgba(16,185,129,0.1);
+            --shadow:0 4px 16px rgba(0,0,0,0.35); --shadow-lg:0 12px 32px rgba(0,0,0,0.5);
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);min-height:100vh;}
+
+        /* NAVBAR */
+        .navbar{height:var(--navbar-h);background:var(--surface);border-bottom:1px solid var(--border);
+            display:flex;align-items:center;padding:0 28px;gap:14px;position:sticky;top:0;z-index:200;box-shadow:var(--shadow);}
+        [data-theme="light"] .navbar{background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);}
+        [data-theme="dark"] .navbar{background:rgba(30,41,59,0.92);backdrop-filter:blur(12px);}
+        .nav-brand{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;color:var(--text-main);text-decoration:none;}
+        .nav-brand i{color:var(--primary);}
+        .nav-divider{width:1px;height:26px;background:var(--border);margin:0 6px;}
+        .nav-page-title{font-size:14px;font-weight:600;color:var(--text-muted);}
+        .nav-spacer{flex:1;}
+        .nav-icon-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);
+            width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+            cursor:pointer;transition:var(--transition);text-decoration:none;}
+        .nav-icon-btn:hover{color:var(--primary);border-color:var(--primary);background:var(--primary-dim);}
+
+        /* PAGE */
+        .page-content{max-width:1100px;margin:0 auto;padding:32px 24px;}
+
+        /* STAT CARDS */
+        .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;}
+        .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+            padding:20px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);transition:var(--transition);}
+        .stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
+        .stat-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+        .stat-val{font-size:24px;font-weight:800;color:var(--text-main);}
+        .stat-lbl{font-size:12px;color:var(--text-muted);margin-top:1px;}
+
+        /* SECTION HEADER */
+        .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+        .section-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;}
+        .section-title i{color:var(--primary);width:18px;height:18px;}
+
+        /* FILTER ROW */
+        .filter-row{display:flex;gap:8px;flex-wrap:wrap;}
+        .filter-pill{padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:transparent;
+            color:var(--text-muted);font-size:13px;font-weight:500;cursor:pointer;transition:var(--transition);}
+        .filter-pill:hover{border-color:var(--primary);color:var(--primary);}
+        .filter-pill.active{background:var(--primary);color:white;border-color:var(--primary);}
+
+        /* PURCHASE CARDS */
+        .purchases-list{display:flex;flex-direction:column;gap:16px;}
+
+        .purchase-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+            overflow:hidden;box-shadow:var(--shadow);transition:var(--transition);}
+        .purchase-card:hover{box-shadow:var(--shadow-lg);border-color:rgba(16,185,129,0.2);}
+
+        .purchase-card-top{display:flex;align-items:stretch;gap:0;}
+        .purchase-img{width:160px;flex-shrink:0;object-fit:cover;background:var(--surface-2);}
+        .purchase-img-placeholder{width:160px;flex-shrink:0;background:var(--surface-2);
+            display:flex;align-items:center;justify-content:center;color:var(--text-muted);min-height:130px;}
+        .purchase-body{flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:6px;}
+
+        .purchase-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px;}
+        .purchase-title{font-size:16px;font-weight:700;color:var(--text-main);line-height:1.3;}
+        .purchase-price{font-size:18px;font-weight:800;color:var(--primary);white-space:nowrap;}
+        .purchase-price.free{font-size:14px;color:var(--text-muted);font-weight:600;}
+
+        .purchase-meta-row{display:flex;gap:16px;flex-wrap:wrap;}
+        .purchase-meta-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted);}
+        .purchase-meta-item svg{width:12px;height:12px;}
+
+        .purchase-status{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;
+            font-size:12px;font-weight:600;width:fit-content;margin-top:4px;}
+        .status-pending{background:rgba(245,158,11,0.1);color:var(--warning);}
+        .status-completed{background:rgba(16,185,129,0.1);color:var(--primary);}
+        .status-cancelled{background:rgba(239,68,68,0.1);color:var(--danger);}
+
+        /* Seller section */
+        .purchase-footer{padding:14px 20px;border-top:1px solid var(--border);background:var(--surface-2);
+            display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+        .seller-row{display:flex;align-items:center;gap:10px;}
+        .seller-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#059669);
+            color:white;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+        .seller-detail h5{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:1px;}
+        .seller-detail span{font-size:11px;color:var(--text-muted);}
+
+        .footer-actions{display:flex;gap:8px;}
+        .btn-msg{background:transparent;border:1px solid var(--border);color:var(--text-muted);
+            padding:7px 14px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;
+            display:flex;align-items:center;gap:5px;transition:var(--transition);}
+        .btn-msg:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-dim);}
+        .btn-view-listing{background:var(--primary-dim);border:1px solid rgba(16,185,129,0.2);color:var(--primary);
+            padding:7px 14px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;
+            display:flex;align-items:center;gap:5px;transition:var(--transition);}
+        .btn-view-listing:hover{background:var(--primary);color:white;}
+
+        /* DETAIL DRAWER */
+        .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);
+            display:none;justify-content:flex-end;z-index:500;}
+        .drawer-overlay.open{display:flex;animation:fadeIn 0.2s ease;}
+        .drawer{width:100%;max-width:480px;background:var(--surface);height:100%;overflow-y:auto;
+            box-shadow:-8px 0 32px rgba(0,0,0,0.2);animation:slideFromRight 0.3s cubic-bezier(0.34,1.2,0.64,1);}
+        @keyframes slideFromRight{from{transform:translateX(100%)}to{transform:none}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+        .drawer-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--surface);z-index:10;}
+        .drawer-close{background:transparent;border:1px solid var(--border);color:var(--text-muted);
+            width:34px;height:34px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);}
+        .drawer-close:hover{color:var(--danger);border-color:var(--danger);}
+        .drawer-body{padding:24px;}
+
+        .drawer-section{margin-bottom:24px;}
+        .drawer-section-label{font-size:11px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
+            color:var(--primary);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+        .drawer-section-label i{width:13px;height:13px;}
+
+        .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+        .info-box{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;}
+        .info-box-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;}
+        .info-box-value{font-size:14px;font-weight:700;color:var(--text-main);}
+
+        .seller-full-card{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:18px;
+            display:flex;align-items:center;gap:14px;}
+        .seller-full-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#059669);
+            color:white;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+        .seller-full-name{font-size:16px;font-weight:700;margin-bottom:3px;}
+        .seller-full-role{font-size:12px;color:var(--text-muted);}
+
+        .contact-grid{display:flex;flex-direction:column;gap:10px;}
+        .contact-item{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
+            display:flex;align-items:center;gap:12px;transition:var(--transition);}
+        .contact-item:hover{border-color:var(--primary);}
+        .contact-item-icon{color:var(--primary);}
+        .contact-item-label{font-size:11px;color:var(--text-muted);margin-bottom:2px;}
+        .contact-item-value{font-size:14px;font-weight:600;color:var(--text-main);}
+
+        /* EMPTY STATE */
+        .empty-state{text-align:center;padding:80px 20px;color:var(--text-muted);}
+        .empty-state i{opacity:0.2;margin-bottom:16px;display:block;}
+        .empty-state h3{font-size:18px;font-weight:600;margin-bottom:8px;}
+        .empty-state p{font-size:14px;margin-bottom:20px;}
+        .btn-to-market{background:var(--primary);color:white;border:none;padding:12px 24px;border-radius:10px;
+            font-size:14px;font-weight:700;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:8px;}
+        .btn-to-market:hover{background:var(--primary-hover);transform:translateY(-1px);}
+
+        /* LOADER */
+        .loader{text-align:center;padding:60px;color:var(--text-muted);}
+        .loader i{animation:spin 1s linear infinite;margin-bottom:12px;display:block;}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        @media(max-width:768px){
+            .stats-row{grid-template-columns:repeat(2,1fr);}
+            .purchase-img{width:100px;}
+            .purchase-img-placeholder{width:100px;}
+            .page-content{padding:20px 16px;}
+        }
+        @media(max-width:500px){
+            .stats-row{grid-template-columns:1fr 1fr;}
+            .purchase-card-top{flex-direction:column;}
+            .purchase-img{width:100%;height:180px;}
+            .purchase-img-placeholder{width:100%;height:140px;}
+            .info-grid{grid-template-columns:1fr;}
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <a class="nav-brand" href="ilan.html">
+        <i data-feather="leaf"></i><span>AgriSynth</span>
+    </a>
+    <div class="nav-divider"></div>
+    <span class="nav-page-title">Alışverişlerim</span>
+    <div class="nav-spacer"></div>
+    <a href="ilan.html" class="nav-icon-btn" title="İlan Pazarı">
+        <i data-feather="shopping-bag"></i>
+    </a>
+    <button class="nav-icon-btn" onclick="toggleTheme()" id="themeBtn">
+        <i data-feather="moon" id="themeIcon"></i>
+    </button>
+    <button class="nav-icon-btn" onclick="goBack()" title="Panele Dön">
+        <i data-feather="arrow-left"></i>
+    </button>
+</nav>
+
+<div class="page-content">
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(16,185,129,0.1);color:var(--primary);">
+                <i data-feather="shopping-cart"></i>
+            </div>
+            <div>
+                <div class="stat-val" id="statTotal">0</div>
+                <div class="stat-lbl">Toplam Alışveriş</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(59,130,246,0.1);color:var(--info);">
+                <i data-feather="credit-card"></i>
+            </div>
+            <div>
+                <div class="stat-val" id="statSpent">0 ₺</div>
+                <div class="stat-lbl">Toplam Harcama</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:var(--warning);">
+                <i data-feather="clock"></i>
+            </div>
+            <div>
+                <div class="stat-val" id="statPending">0</div>
+                <div class="stat-lbl">Bekleyen</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(16,185,129,0.1);color:var(--primary);">
+                <i data-feather="check-circle"></i>
+            </div>
+            <div>
+                <div class="stat-val" id="statCompleted">0</div>
+                <div class="stat-lbl">Tamamlanan</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-title"><i data-feather="package"></i>Satın Aldıklarım</div>
+        <div class="filter-row">
+            <button class="filter-pill active" data-sf="all" onclick="setStatusFilter('all',this)">Tümü</button>
+            <button class="filter-pill" data-sf="pending" onclick="setStatusFilter('pending',this)">Bekleyen</button>
+            <button class="filter-pill" data-sf="completed" onclick="setStatusFilter('completed',this)">Tamamlanan</button>
+            <button class="filter-pill" data-sf="cancelled" onclick="setStatusFilter('cancelled',this)">İptal</button>
+        </div>
+    </div>
+
+    <div id="purchasesContainer" class="purchases-list">
+        <div class="loader">
+            <i data-feather="loader" style="width:28px;height:28px;color:var(--primary);"></i>
+            <span>Alışverişler yükleniyor...</span>
+        </div>
+    </div>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="if(event.target===this)closeDrawer()">
+    <div class="drawer" id="detailDrawer">
+        <div class="drawer-header">
+            <button class="drawer-close" onclick="closeDrawer()">
+                <i data-feather="x" style="width:14px;height:14px;"></i>
+            </button>
+            <h3 style="font-size:16px;font-weight:700;">Alışveriş Detayı</h3>
+        </div>
+        <div class="drawer-body" id="drawerBody"></div>
+    </div>
+</div>
+
+<script src="satin-alinmalar.js"></script>
+</body>
+</html>

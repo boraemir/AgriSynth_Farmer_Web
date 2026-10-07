@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriSynth - Kullanıcı Paneli</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const savedTheme = localStorage.getItem('AgriSynth-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+    <link rel="stylesheet" href="normal-user.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i data-feather="leaf"></i><span>AgriSynth</span>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active" onclick="switchTab('home-tab', this)">
+                <i data-feather="home"></i><span>Ana Sayfa</span>
+            </div>
+            <a href="ilan.html" class="nav-item" style="text-decoration:none;">
+                <i data-feather="shopping-bag"></i><span>İlan Pazarı</span>
+            </a>
+            <a href="is-arama.html" class="nav-item" style="text-decoration:none;">
+                <i data-feather="briefcase"></i><span>İş Arama</span>
+            </a>
+            <a href="sosyalmedya.html" class="nav-item" style="text-decoration: none;"><i data-feather="share-2"></i><span>Sosyal Medya</span></a>
+            <div class="nav-item" onclick="switchTab('messages-tab', this)">
+                <i data-feather="message-circle"></i><span>Mesajlarım</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('notes-tab', this)">
+                <i data-feather="file-text"></i><span>Notlarım</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('calendar-tab', this)">
+                <i data-feather="calendar"></i><span>Takvim</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('weather-tab', this)">
+                <i data-feather="cloud"></i><span>Hava Durumu</span>         
+               </div>
+
+            <a href="bildirimler.html" class="nav-item" style="text-decoration:none;">
+                <i data-feather="bell"></i>
+                <span>Bildirimler</span>
+                <span class="nav-notif-badge" id="navNotifBadge">0</span>
+            </a>
+                                <a href="profil.html" class="nav-item" style="text-decoration: none;"><i data-feather="user"></i><span>Profilim</span></a>
+
+        </div>
+
+       <div class="user-profile" style="cursor: pointer;" onclick="window.location.href='profil.html'" title="Profili Görüntüle">
+            <img id="userAvatarImg" src="" style="display:none; width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+            
+            <div class="avatar" id="userAvatar">U</div>
+            
+            <div class="user-info">
+                <h4 id="userName">Kullanıcı Bekleniyor...</h4>
+                <p>Aktif Kullanıcı</p>
+            </div>
+            <div style="display: flex; gap: 10px; margin-left: auto;">
+                <button class="theme-btn" onclick="event.stopPropagation(); toggleTheme()" title="Tema Değiştir"><i id="themeToggleBtn" data-feather="moon" style="width: 18px;"></i></button>
+                <button class="theme-btn" onclick="event.stopPropagation(); logout()" title="Çıkış Yap" style="color: var(--danger);"><i data-feather="log-out" style="width: 18px;"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="content-area" id="mainContent">
+        <div id="apiWarning"></div>
+
+        <section id="home-tab" class="tab-section active">
+            <div class="home-hero">
+                <div class="home-hero-left">
+                    <div class="home-hero-date">
+                        <i data-feather="sun" style="width:13px;height:13px;"></i>
+                        <span id="heroDate"></span>
+                    </div>
+                    <h1 id="welcomeText">Merhaba! 👋</h1>
+                    <p id="heroSubtitle">Sistemimize hoş geldiniz! Bugün kendiniz için ne planladınız?</p>
+                </div>
+                <div class="home-hero-right">
+                    <div class="hero-weather-mini">
+                        <div class="hero-weather-temp" id="heroTemp">--°</div>
+                        <div class="hero-weather-city" id="heroCity">İstanbul</div>
+                        <div class="hero-weather-desc" id="heroWeatherDesc">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="home-stats-row">
+                <div class="home-stat" onclick="switchTabById('notes-tab')">
+                    <div class="home-stat-icon" style="background:rgba(16,185,129,0.1);color:var(--primary);">
+                        <i data-feather="file-text"></i>
+                    </div>
+                    <div>
+                        <div class="home-stat-val" id="statNotes">0</div>
+                        <div class="home-stat-lbl">Toplam Not</div>
+                    </div>
+                </div>
+                <div class="home-stat" onclick="switchTabById('calendar-tab')">
+                    <div class="home-stat-icon" style="background:rgba(59,130,246,0.1);color:var(--info);">
+                        <i data-feather="calendar"></i>
+                    </div>
+                    <div>
+                        <div class="home-stat-val" id="homeCalCount">0</div>
+                        <div class="home-stat-lbl">Takvim Notu</div>
+                    </div>
+                </div>
+                <div class="home-stat" onclick="switchTabById('messages-tab')">
+                    <div class="home-stat-icon" style="background:rgba(245,158,11,0.1);color:var(--warning);">
+                        <i data-feather="message-circle"></i>
+                    </div>
+                    <div>
+                        <div class="home-stat-val" id="homeMessageCount">0</div>
+                        <div class="home-stat-lbl">Okunmamış Mesaj</div>
+                    </div>
+                </div>
+                <div class="home-stat" onclick="window.location.href='bildirimler.html'">
+                    <div class="home-stat-icon" style="background:rgba(239,68,68,0.1);color:var(--danger);">
+                        <i data-feather="bell"></i>
+                    </div>
+                    <div>
+                        <div class="home-stat-val" id="homeNotifCount">0</div>
+                        <div class="home-stat-lbl">Okunmamış Bildirim</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="home-grid-2">
+                <div class="home-widget">
+                    <div class="home-widget-title">
+                        <div class="home-widget-title-left">
+                            <i data-feather="clock"></i>Yaklaşan Notlar
+                        </div>
+                        <button class="home-widget-link" onclick="switchTabById('calendar-tab')">
+                            Takvime git <i data-feather="arrow-right" style="width:12px;height:12px;"></i>
+                        </button>
+                    </div>
+                    <div id="upcomingNotesContainer">
+                        <div class="upcoming-empty">
+                            <i data-feather="calendar" style="width:28px;height:28px;"></i>
+                            Yaklaşan takvim notu yok
+                        </div>
+                    </div>
+                </div>
+                <div class="home-widget">
+                    <div class="home-widget-title">
+                        <div class="home-widget-title-left">
+                            <i data-feather="file-text"></i>Son Notlarım
+                        </div>
+                        <button class="home-widget-link" onclick="switchTabById('notes-tab')">
+                            Tümü <i data-feather="arrow-right" style="width:12px;height:12px;"></i>
+                        </button>
+                    </div>
+                    <div id="recentNotesContainer">
+                        <div class="upcoming-empty">
+                            <i data-feather="file-text" style="width:28px;height:28px;"></i>
+                            Henüz not eklenmedi
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="home-grid-2">
+                <div class="home-widget">
+                    <div class="home-widget-title">
+                        <div class="home-widget-title-left">
+                            <i data-feather="zap"></i>Hızlı Erişim
+                        </div>
+                    </div>
+                    <div class="quick-access-grid">
+                        <button class="quick-btn" onclick="openNoteModal()">
+                            <i data-feather="edit-3"></i>
+                            <span>Not Ekle</span>
+                            <small>Notlarım'a kaydet</small>
+                        </button>
+                        <button class="quick-btn" onclick="calOpenAddModal()">
+                            <i data-feather="calendar"></i>
+                            <span>Takvim Notu</span>
+                            <small>Takvime ekle</small>
+                        </button>
+                        <a href="is-arama.html" style="text-decoration:none;">
+                            <button class="quick-btn" style="width:100%">
+                                <i data-feather="briefcase"></i>
+                                <span>İş Ara</span>
+                                <small>Güncel ilanlar</small>
+                            </button>
+                        </a>
+                        <a href="ilan.html" style="text-decoration:none;">
+                            <button class="quick-btn" style="width:100%">
+                                <i data-feather="shopping-bag"></i>
+                                <span>İlan Pazarı</span>
+                                <small>Alım & Satım</small>
+                            </button>
+                        </a>
+                    </div>
+                </div>
+                <div class="home-widget">
+                    <div class="home-widget-title">
+                        <div class="home-widget-title-left">
+                            <i data-feather="sun"></i>Günün Tarım İpucu
+                        </div>
+                    </div>
+                    <div class="agri-tip" id="agriTipBox">
+                        <div class="agri-tip-icon">
+                            <i data-feather="leaf" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div>
+                            <div class="agri-tip-label">Bugünün İpucu</div>
+                            <div class="agri-tip-text" id="agriTipText">Yükleniyor...</div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px;">
+                        <div id="season-ilkbahar" style="text-align:center;padding:10px 6px;border-radius:12px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.2s;">🌱<br>İlkbahar</div>
+                        <div id="season-yaz" style="text-align:center;padding:10px 6px;border-radius:12px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.2s;">☀️<br>Yaz</div>
+                        <div id="season-sonbahar" style="text-align:center;padding:10px 6px;border-radius:12px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.2s;">🍂<br>Sonbahar</div>
+                        <div id="season-kis" style="text-align:center;padding:10px 6px;border-radius:12px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.2s;">❄️<br>Kış</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="messages-tab" class="tab-section">
+            <div class="msg-sidebar" id="msgSidebar">
+                <div class="msg-sidebar-header">
+                    <div class="msg-sidebar-title">
+                        <i data-feather="message-circle"></i>Mesajlarım
+                    </div>
+                </div>
+                <div class="msg-search">
+                    <input type="text" id="msgSearchInput" placeholder="Kişi ara..." oninput="filterConversations()">
+                </div>
+                <div class="msg-conv-list" id="msgConvList">
+                    <div style="padding:30px;text-align:center;color:var(--text-muted);font-size:13px;">
+                        <i data-feather="loader" style="animation:spin 1s linear infinite;width:20px;display:block;margin:0 auto 8px;"></i>Yükleniyor...
+                    </div>
+                </div>
+            </div>
+            <div class="msg-chat-area">
+                <div class="msg-empty-state" id="msgEmptyState">
+                    <i data-feather="message-square" style="width:56px;height:56px;"></i>
+                    <h3>Mesajlaşma</h3>
+                    <p>Sohbet başlatmak için sol taraftan bir kişi seçin.</p>
+                </div>
+                <div class="msg-chat-header" id="msgChatHeader" style="display:none;">
+                    <button class="msg-back-btn" onclick="msgShowSidebar()">
+                        <i data-feather="chevron-left" style="width:20px;height:20px;"></i>
+                    </button>
+                    <div class="msg-conv-avatar" id="msgActiveAvatar">U</div>
+                    <div class="msg-chat-header-info">
+                        <div class="msg-chat-header-name" id="msgActiveName">—</div>
+                        <div class="msg-chat-header-status" id="msgActiveStatus">Çevrimiçi</div>
+                    </div>
+                </div>
+                <div class="msg-edit-banner" id="msgEditBanner">
+                    <span><i data-feather="edit-2" style="width:12px;margin-right:5px;"></i> Mesaj düzenleniyor...</span>
+                    <button onclick="msgCancelEdit()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:12px;font-weight:600;">İptal</button>
+                </div>
+                <div class="msg-messages" id="msgMessages" style="display:none;"></div>
+                <div class="msg-input-wrap" id="msgInputWrap" style="display:none;">
+                    <input type="hidden" id="msgEditId">
+                    <textarea class="msg-input-box" id="msgInput" rows="1" placeholder="Mesaj yazın..." onkeypress="msgHandleKey(event)" oninput="msgAutoResize(this)"></textarea>
+                    <button class="msg-send-btn" onclick="msgSend()">
+                        <i data-feather="send" style="width:18px;margin-left:-1px;"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="notes-tab" class="tab-section">
+            <div class="page-header">
+                <div><h1>Notlarım</h1><p>İlanlar, iş başvuruları ve hatırlatmalar için.</p></div>
+                <button class="btn-primary" onclick="openNoteModal()"><i data-feather="plus"></i> Yeni Not</button>
+            </div>
+            <div id="notesLoading" class="loading-spinner"><i data-feather="loader"></i> Notlar yükleniyor...</div>
+            <div id="notesContainer" class="notes-grid"></div>
+        </section>
+
+        <section id="calendar-tab" class="tab-section">
+            <div class="cal-top-bar">
+                <div class="cal-nav-row">
+                    <button class="week-nav-btn" onclick="calChangeWeek(-1)">
+                        <i data-feather="chevron-left" style="width:15px;height:15px;"></i>
+                    </button>
+                    <button class="week-nav-btn" onclick="calChangeWeek(1)">
+                        <i data-feather="chevron-right" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div class="week-label" id="calWeekLabel">Yükleniyor...</div>
+                    <button class="today-btn" onclick="calGoToday()">Bugün</button>
+                    <button class="cal-add-btn" onclick="calOpenAddModal()">
+                        <i data-feather="plus" style="width:14px;height:14px;"></i> Not Ekle
+                    </button>
+                </div>
+            </div>
+            <div class="cal-loader" id="calLoader">
+                <i data-feather="loader" class="cal-spin" style="width:24px;height:24px;color:var(--primary)"></i>
+                <span>Takvim yükleniyor...</span>
+            </div>
+            <div class="cal-scroll" id="calScroll">
+                <div class="cal-days-header" id="calDaysHeader">
+                    <div class="cal-days-spacer"></div>
+                </div>
+                <div class="cal-grid" id="calGrid"></div>
+            </div>
+        </section>
+
+        <section id="weather-tab" class="tab-section">
+            <div class="page-header"><div><h1>Hava Durumu</h1><p>Tarımsal faaliyetleriniz için hava tahmini.</p></div></div>
+            <div style="display:flex;gap:10px;margin-bottom:20px;">
+                <div style="flex:1;display:flex;gap:10px;">
+                    <input type="text" id="weatherCityInput" class="form-input" placeholder="Şehir ara..." style="flex:1;">
+                    <button class="btn-primary" onclick="searchWeatherCity()">Ara</button>
+                </div>
+                <button class="btn-outline" onclick="getWeatherLocation()"><i data-feather="crosshair"></i> Konumum</button>
+            </div>
+            <div id="weatherLoading" class="loading-spinner"><i data-feather="loader"></i> Hava durumu yükleniyor...</div>
+            <div id="weatherContent" style="display:none;">
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <div><h2 id="weatherLocation">İstanbul</h2><p id="weatherDate" style="color:var(--text-muted);"></p></div>
+                        <img id="weatherIcon" src="" alt="" style="width:60px;">
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;text-align:center;">
+                        <div><div style="color:var(--text-muted);">Sıcaklık</div><div style="font-size:32px;font-weight:300;" id="weatherTemp">--°</div></div>
+                        <div><div style="color:var(--text-muted);">Nem</div><div style="font-size:32px;font-weight:300;" id="weatherHumidity">--%</div></div>
+                        <div><div style="color:var(--text-muted);">Rüzgar</div><div style="font-size:32px;font-weight:300;" id="weatherWind">-- km/s</div></div>
+                    </div>
+                </div>
+                <div class="card"><div class="card-title">3 Günlük Tahmin</div><div style="height:200px;"><canvas id="forecastChart"></canvas></div></div>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal-overlay" id="noteModalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="noteModalTitle">Yeni Not</h2>
+                <button class="close-btn" onclick="closeNoteModal()"><i data-feather="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="noteForm">
+                    <input type="hidden" id="noteId">
+                    <div class="form-group">
+                        <label class="form-label">Not Başlığı</label>
+                        <input type="text" id="noteTitle" class="form-input" placeholder="Örn: Traktör Alımı..." required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Not İçeriği</label>
+                        <textarea id="noteContent" class="form-input" rows="4" required></textarea>
+                    </div>
+                    <div style="background:var(--surface-hover);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                            <i data-feather="calendar" style="width:16px;height:16px;color:var(--primary);"></i>
+                            <span style="font-size:13px;font-weight:700;color:var(--text-main);">Takvime Ekle <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(opsiyonel)</span></span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Tarih</label>
+                                <input type="date" id="noteDate" class="form-input">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Saat</label>
+                                <input type="time" id="noteTime" class="form-input">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Bitiş Saati</label>
+                                <input type="time" id="noteEndTime" class="form-input">
+                            </div>
+                            <div></div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Takvim Rengi</label>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="noteColorPicker">
+                                <div class="note-cal-color-dot selected" data-nc="0" style="background:#10b981;" onclick="selectNoteColor(0)"></div>
+                                <div class="note-cal-color-dot" data-nc="1" style="background:#8b5cf6;" onclick="selectNoteColor(1)"></div>
+                                <div class="note-cal-color-dot" data-nc="2" style="background:#f59e0b;" onclick="selectNoteColor(2)"></div>
+                                <div class="note-cal-color-dot" data-nc="3" style="background:#3b82f6;" onclick="selectNoteColor(3)"></div>
+                                <div class="note-cal-color-dot" data-nc="4" style="background:#ec4899;" onclick="selectNoteColor(4)"></div>
+                                <div class="note-cal-color-dot" data-nc="5" style="background:#ef4444;" onclick="selectNoteColor(5)"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fotoğraflar</label>
+                        <div class="image-upload-area" onclick="document.getElementById('imageInput').click()">
+                            <i data-feather="image"></i>
+                            <p>Fotoğraf eklemek için tıklayın</p>
+                        </div>
+                        <input type="file" id="imageInput" accept="image/*" multiple style="display:none;" onchange="handleImageSelect(event)">
+                        <div id="imagePreviewContainer" class="image-preview-grid"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Etiketler (virgülle ayırın)</label>
+                        <input type="text" id="noteTags" class="form-input" placeholder="önemli, iş, toplantı">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeNoteModal()">İptal</button>
+                <button class="btn-primary" onclick="saveNote()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cal-modal-overlay" id="calAddModal">
+        <div class="cal-modal-card">
+            <div class="cal-modal-header">
+                <div class="cal-modal-icon"><i data-feather="edit-3" style="width:17px;height:17px;"></i></div>
+                <h3>Takvime Not Ekle</h3>
+                <button class="cal-modal-close" onclick="calCloseAddModal()"><i data-feather="x" style="width:13px;height:13px;"></i></button>
+            </div>
+            <div class="cal-modal-body">
+                <div class="cal-form-row">
+                    <label>Başlık</label>
+                    <input type="text" class="cal-form-input" id="calNoteTitle" placeholder="Not başlığı...">
+                </div>
+                <div class="cal-form-row">
+                    <label>Açıklama (opsiyonel)</label>
+                    <textarea class="cal-form-input" id="calNoteDesc" placeholder="Detay..."></textarea>
+                </div>
+                <div class="cal-form-row-2">
+                    <div class="cal-form-row" style="margin-bottom:0">
+                        <label>Tarih</label>
+                        <input type="date" class="cal-form-input" id="calNoteDate">
+                    </div>
+                    <div class="cal-form-row" style="margin-bottom:0">
+                        <label>Saat</label>
+                        <input type="time" class="cal-form-input" id="calNoteTime">
+                    </div>
+                </div>
+                <div class="cal-form-row-2">
+                    <div class="cal-form-row" style="margin-bottom:0">
+                        <label>Bitiş Saati (opsiyonel)</label>
+                        <input type="time" class="cal-form-input" id="calNoteEndTime">
+                    </div>
+                    <div></div>
+                </div>
+                <div class="cal-form-row">
+                    <label>Renk</label>
+                    <div class="cal-color-picker" id="calColorPicker">
+                        <div class="cal-color-btn selected" data-c="0" style="background:#10b981;" onclick="calSelectColor(0)"></div>
+                        <div class="cal-color-btn" data-c="1" style="background:#8b5cf6;" onclick="calSelectColor(1)"></div>
+                        <div class="cal-color-btn" data-c="2" style="background:#f59e0b;" onclick="calSelectColor(2)"></div>
+                        <div class="cal-color-btn" data-c="3" style="background:#3b82f6;" onclick="calSelectColor(3)"></div>
+                        <div class="cal-color-btn" data-c="4" style="background:#ec4899;" onclick="calSelectColor(4)"></div>
+                        <div class="cal-color-btn" data-c="5" style="background:#ef4444;" onclick="calSelectColor(5)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="cal-modal-footer">
+                <button class="cal-btn-cancel" onclick="calCloseAddModal()">İptal</button>
+                <button class="cal-btn-save" onclick="calSaveNote()" id="calSaveBtn">
+                    <i data-feather="check" style="width:13px;height:13px;"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cal-modal-overlay" id="calDetailModal">
+        <div class="cal-detail-card" id="calDetailCard"></div>
+    </div>
+
+    <div class="toast" id="toast">
+        <i data-feather="check-circle" id="toastIcon"></i>
+        <span id="toastMsg">İşlem başarılı</span>
+    </div>
+
+    <script src="normal-user.js"></script>
+</body>
+</html>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriSynth - İlan Pazarı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>(function(){ const t=localStorage.getItem('AgriSynth-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();</script>
+    <style>
+        :root {
+            --bg:#f8fafc; --surface:#fff; --surface-2:#f1f5f9; --border:#e2e8f0;
+            --text-main:#0f172a; --text-muted:#64748b;
+            --primary:#10b981; --primary-hover:#059669; --primary-dim:rgba(16,185,129,0.08);
+            --danger:#ef4444; --warning:#f59e0b; --info:#3b82f6;
+            --shadow:0 4px 16px rgba(0,0,0,0.06); --shadow-lg:0 12px 32px rgba(0,0,0,0.12);
+            --radius:18px; --navbar-h:68px; --transition:all 0.2s ease;
+        }
+        [data-theme="dark"] {
+            --bg:#0f172a; --surface:#1e293b; --surface-2:#334155; --border:#334155;
+            --text-main:#f1f5f9; --text-muted:#94a3b8;
+            --primary-dim:rgba(16,185,129,0.1);
+            --shadow:0 4px 16px rgba(0,0,0,0.35); --shadow-lg:0 12px 32px rgba(0,0,0,0.5);
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);min-height:100vh;}
+
+        /* NAVBAR */
+        .navbar{height:var(--navbar-h);background:var(--surface);border-bottom:1px solid var(--border);
+            display:flex;align-items:center;padding:0 28px;gap:14px;position:sticky;top:0;z-index:200;box-shadow:var(--shadow);}
+        [data-theme="light"] .navbar{background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);}
+        [data-theme="dark"] .navbar{background:rgba(30,41,59,0.92);backdrop-filter:blur(12px);}
+        .nav-brand{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;color:var(--text-main);text-decoration:none;}
+        .nav-brand i{color:var(--primary);}
+        .nav-divider{width:1px;height:26px;background:var(--border);margin:0 6px;}
+        .nav-page-title{font-size:14px;font-weight:600;color:var(--text-muted);}
+        .nav-spacer{flex:1;}
+        .nav-icon-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);
+            width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+            cursor:pointer;transition:var(--transition);text-decoration:none;}
+        .nav-icon-btn:hover{color:var(--primary);border-color:var(--primary);background:var(--primary-dim);}
+        .btn-add{background:var(--primary);color:white;border:none;padding:9px 18px;border-radius:10px;
+            font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;
+            transition:var(--transition);box-shadow:0 4px 12px rgba(16,185,129,0.3);}
+        .btn-add:hover{background:var(--primary-hover);transform:translateY(-1px);box-shadow:0 6px 16px rgba(16,185,129,0.4);}
+
+        /* LAYOUT */
+        .page-layout{display:flex;gap:0;min-height:calc(100vh - var(--navbar-h));}
+
+        /* LEFT FILTERS */
+        .filter-panel{width:260px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
+            padding:24px 20px;position:sticky;top:var(--navbar-h);height:calc(100vh - var(--navbar-h));overflow-y:auto;}
+        .filter-panel::-webkit-scrollbar{width:4px;}
+        .filter-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+        .filter-section{margin-bottom:28px;}
+        .filter-section-title{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
+            color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+        .filter-section-title i{color:var(--primary);width:13px;height:13px;}
+        .filter-chip-grid{display:flex;flex-direction:column;gap:6px;}
+        .filter-chip{padding:9px 14px;border-radius:10px;border:1px solid var(--border);
+            background:transparent;color:var(--text-muted);font-size:13px;font-weight:500;
+            cursor:pointer;transition:var(--transition);text-align:left;display:flex;align-items:center;gap:8px;}
+        .filter-chip:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-dim);}
+        .filter-chip.active{background:var(--primary);color:white;border-color:var(--primary);font-weight:600;}
+        .filter-chip .chip-count{margin-left:auto;font-size:11px;opacity:0.7;background:rgba(255,255,255,0.2);padding:1px 6px;border-radius:10px;}
+        .filter-chip:not(.active) .chip-count{background:var(--surface-2);color:var(--text-muted);}
+
+        .search-box{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);
+            border-radius:12px;padding:10px 14px;margin-bottom:20px;transition:var(--transition);}
+        .search-box:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim);}
+        .search-box i{color:var(--text-muted);width:15px;height:15px;flex-shrink:0;}
+        .search-box input{background:transparent;border:none;outline:none;color:var(--text-main);font-size:13px;width:100%;}
+        .search-box input::placeholder{color:var(--text-muted);}
+
+        .price-range{gap:8px;align-items:center;}
+        .price-input{flex:1;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);
+            border-radius:9px;color:var(--text-main);font-size:13px;outline:none;transition:var(--transition);}
+        .price-input:focus{border-color:var(--primary);}
+        .price-sep{ display: block;
+    text-align: center;;color:var(--text-muted);font-size:12px;}
+
+        /* MAIN CONTENT */
+        .main-content{flex:1;padding:24px 28px;}
+
+        .content-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+        .result-info{font-size:13px;color:var(--text-muted);}
+        .result-info strong{color:var(--text-main);}
+        .sort-select{background:var(--surface);border:1px solid var(--border);color:var(--text-main);
+            padding:8px 12px;border-radius:10px;font-size:13px;outline:none;cursor:pointer;}
+
+        /* LISTING GRID */
+        .listings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;}
+
+        .listing-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+            overflow:hidden;cursor:pointer;transition:var(--transition);position:relative;}
+        .listing-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg);border-color:rgba(16,185,129,0.3);}
+
+        .card-img-wrap{position:relative;height:200px;overflow:hidden;background:var(--surface-2);}
+        .card-img{width:100%;height:100%;object-fit:cover;transition:transform 0.4s ease;}
+        .listing-card:hover .card-img{transform:scale(1.05);}
+        .card-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--text-muted);}
+        .card-img-placeholder i{opacity:0.3;}
+        .card-img-placeholder span{font-size:12px;opacity:0.5;}
+
+        .card-type-badge{position:absolute;top:12px;left:12px;padding:4px 12px;border-radius:20px;
+            font-size:11px;font-weight:700;backdrop-filter:blur(8px);}
+        .badge-sell{background:rgba(16,185,129,0.85);color:white;}
+        .badge-buy{background:rgba(59,130,246,0.85);color:white;}
+
+        .card-category-badge{position:absolute;top:12px;right:12px;padding:4px 10px;border-radius:20px;
+            font-size:11px;font-weight:600;background:rgba(0,0,0,0.45);color:white;backdrop-filter:blur(6px);}
+
+        .card-img-count{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.55);
+            color:white;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;
+            display:flex;align-items:center;gap:4px;backdrop-filter:blur(4px);}
+
+        .card-body{padding:16px;}
+        .card-price{font-size:20px;font-weight:800;color:var(--primary);margin-bottom:5px;}
+        .card-price.no-price{font-size:14px;font-weight:600;color:var(--text-muted);}
+        .card-title{font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:8px;
+            display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;}
+        .card-location{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;margin-bottom:10px;}
+        .card-location svg{width:12px;height:12px;}
+
+        .card-footer{display:flex;align-items:center;justify-content:space-between;
+            padding:10px 16px;border-top:1px solid var(--border);background:var(--surface-2);}
+        .card-seller{display:flex;align-items:center;gap:7px;}
+        .seller-mini-avatar{width:24px;height:24px;border-radius:50%;background:var(--primary);
+            color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+        .seller-mini-name{font-size:12px;color:var(--text-muted);}
+        .card-date{font-size:11px;color:var(--text-muted);}
+
+        .card-my-actions{display:none;padding:10px 16px;border-top:1px solid var(--border);gap:8px;}
+        .listing-card.is-mine .card-my-actions{display:flex;}
+        .btn-edit-sm{flex:1;background:rgba(59,130,246,0.1);color:var(--info);border:1px solid rgba(59,130,246,0.25);
+            padding:7px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;transition:var(--transition);
+            display:flex;align-items:center;justify-content:center;gap:4px;}
+        .btn-edit-sm:hover{background:var(--info);color:white;}
+        .btn-delete-sm{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.25);
+            padding:7px 12px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;transition:var(--transition);}
+        .btn-delete-sm:hover{background:var(--danger);color:white;}
+
+        /* EMPTY */
+        .empty-state{grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--text-muted);}
+        .empty-state i{opacity:0.2;margin-bottom:16px;display:block;}
+        .empty-state h3{font-size:18px;font-weight:600;margin-bottom:8px;}
+        .empty-state p{font-size:14px;}
+
+        /* LOADER */
+        .skeleton-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;}
+        .skeleton-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+        .skeleton-img{height:200px;background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
+        .skeleton-body{padding:16px;}
+        .skeleton-line{height:14px;border-radius:6px;background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;margin-bottom:10px;}
+        .skeleton-line.short{width:60%;}
+        .skeleton-line.price{height:20px;width:40%;margin-bottom:12px;}
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+        /* DETAIL MODAL */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);
+            display:none;align-items:center;justify-content:center;z-index:1000;padding:16px;}
+        .modal-overlay.open{display:flex;animation:fadeIn 0.2s ease;}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+        .detail-modal{background:var(--surface);width:100%;max-width:900px;border-radius:24px;
+            overflow:hidden;max-height:92vh;display:flex;flex-direction:column;
+            box-shadow:0 32px 64px rgba(0,0,0,0.25);animation:slideUp 0.3s cubic-bezier(0.34,1.4,0.64,1);}
+        @keyframes slideUp{from{opacity:0;transform:translateY(30px) scale(0.97)}to{opacity:1;transform:none}}
+
+        .detail-inner{display:grid;grid-template-columns:1fr 1fr;overflow-y:auto;}
+
+        /* Photo slider */
+        .photo-section{position:sticky;top:0;height:100%;background:#000;}
+        .photo-slider{height:100%;min-height:400px;position:relative;overflow:hidden;}
+        .photo-slide{position:absolute;inset:0;opacity:0;transition:opacity 0.4s ease;}
+        .photo-slide.active{opacity:1;}
+        .photo-slide img{width:100%;height:100%;object-fit:cover;}
+        .photo-no-img{width:100%;height:100%;min-height:400px;display:flex;align-items:center;justify-content:center;
+            flex-direction:column;gap:12px;color:rgba(255,255,255,0.3);background:#111;}
+        .slider-nav{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+            display:flex;gap:6px;z-index:5;}
+        .slider-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
+        .slider-dot.active{background:white;width:18px;border-radius:3px;}
+        .slider-prev,.slider-next{position:absolute;top:50%;transform:translateY(-50%);
+            background:rgba(0,0,0,0.45);color:white;border:none;width:36px;height:36px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;z-index:5;backdrop-filter:blur(4px);}
+        .slider-prev{left:12px;} .slider-next{right:12px;}
+        .slider-prev:hover,.slider-next:hover{background:rgba(0,0,0,0.7);}
+
+        /* Detail info */
+        .detail-info{padding:28px;overflow-y:auto;display:flex;flex-direction:column;gap:0;}
+        .detail-close{position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.5);border:none;
+            color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;z-index:20;transition:all 0.2s;backdrop-filter:blur(4px);}
+        .detail-close:hover{background:rgba(0,0,0,0.75);}
+
+        .detail-type-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+        .detail-badge{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;}
+        .detail-badge.sell{background:rgba(16,185,129,0.12);color:var(--primary);border:1px solid rgba(16,185,129,0.25);}
+        .detail-badge.buy{background:rgba(59,130,246,0.12);color:var(--info);border:1px solid rgba(59,130,246,0.25);}
+        .detail-badge.cat{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border);}
+
+        .detail-price{font-size:28px;font-weight:800;color:var(--primary);margin-bottom:8px;}
+        .detail-price.no-price{font-size:16px;font-weight:600;color:var(--text-muted);}
+        .detail-title{font-size:20px;font-weight:700;color:var(--text-main);line-height:1.3;margin-bottom:12px;}
+        .detail-location{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);margin-bottom:20px;}
+
+        .detail-divider{height:1px;background:var(--border);margin:16px 0;}
+
+        .detail-section-label{font-size:11px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
+            color:var(--primary);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+        .detail-desc{font-size:14px;color:var(--text-muted);line-height:1.7;white-space:pre-wrap;}
+
+        .detail-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+        .detail-meta-box{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px;}
+        .detail-meta-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;}
+        .detail-meta-value{font-size:14px;font-weight:700;color:var(--text-main);}
+
+        .seller-card{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:16px;
+            display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+        .seller-avatar-lg{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#059669);
+            color:white;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+        .seller-info h4{font-size:15px;font-weight:700;margin-bottom:3px;}
+        .seller-info span{font-size:12px;color:var(--text-muted);}
+
+        .detail-actions{display:flex;gap:10px;margin-top:auto;}
+        .btn-contact{flex:1;background:var(--primary);color:white;border:none;padding:13px;border-radius:12px;
+            font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+            transition:var(--transition);box-shadow:0 4px 12px rgba(16,185,129,0.3);}
+        .btn-contact:hover{background:var(--primary-hover);transform:translateY(-1px);}
+        .btn-purchase{flex:1;background:var(--info);color:white;border:none;padding:13px;border-radius:12px;
+            font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+            transition:var(--transition);box-shadow:0 4px 12px rgba(59,130,246,0.3);}
+        .btn-purchase:hover{background:#2563eb;transform:translateY(-1px);}
+        .btn-close-detail{background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);
+            padding:13px 18px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;transition:var(--transition);}
+        .btn-close-detail:hover{color:var(--text-main);}
+
+        /* ADD/EDIT MODAL */
+        .form-modal{background:var(--surface);width:100%;max-width:560px;border-radius:24px;overflow:hidden;
+            max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 64px rgba(0,0,0,0.25);
+            animation:slideUp 0.3s cubic-bezier(0.34,1.4,0.64,1);}
+        .form-modal-header{padding:20px 24px;border-bottom:1px solid var(--border);
+            display:flex;align-items:center;gap:12px;}
+        .form-modal-icon{width:40px;height:40px;border-radius:11px;background:var(--primary-dim);
+            border:1px solid rgba(16,185,129,0.25);display:flex;align-items:center;justify-content:center;color:var(--primary);}
+        .form-modal-header h3{font-size:16px;font-weight:700;flex:1;}
+        .form-modal-close{background:transparent;border:1px solid var(--border);color:var(--text-muted);
+            width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);}
+        .form-modal-close:hover{color:var(--danger);border-color:var(--danger);background:rgba(239,68,68,0.08);}
+        .form-modal-body{padding:22px 24px;overflow-y:auto;flex:1;}
+        .form-modal-footer{padding:16px 24px;border-top:1px solid var(--border);background:var(--surface-2);
+            display:flex;gap:10px;justify-content:flex-end;}
+
+        .fg{margin-bottom:16px;}
+        .fg label{display:block;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
+            color:var(--text-muted);margin-bottom:7px;}
+        .fi{width:100%;padding:11px 14px;background:var(--surface-2);border:1px solid var(--border);
+            border-radius:10px;color:var(--text-main);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:var(--transition);}
+        .fi:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim);}
+        textarea.fi{resize:vertical;min-height:90px;}
+        .fg-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+        /* Photo upload */
+        .photo-upload-area{border:2px dashed var(--border);border-radius:14px;padding:20px;text-align:center;
+            cursor:pointer;transition:var(--transition);background:var(--surface-2);}
+        .photo-upload-area:hover{border-color:var(--primary);background:var(--primary-dim);}
+        .photo-upload-area i{color:var(--primary);margin-bottom:8px;display:block;}
+        .photo-upload-area p{font-size:13px;color:var(--text-muted);}
+        .photo-preview-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+        .photo-preview-item{position:relative;width:80px;height:80px;border-radius:10px;overflow:hidden;border:2px solid var(--border);}
+        .photo-preview-item img{width:100%;height:100%;object-fit:cover;}
+        .photo-remove{position:absolute;top:3px;right:3px;background:rgba(239,68,68,0.85);color:white;
+            border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:10px;
+            display:flex;align-items:center;justify-content:center;}
+
+        .btn-cancel{background:transparent;border:1px solid var(--border);color:var(--text-muted);
+            padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:var(--transition);}
+        .btn-cancel:hover{color:var(--text-main);}
+        .btn-save{background:var(--primary);color:white;border:none;padding:10px 22px;border-radius:10px;
+            font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;
+            transition:var(--transition);box-shadow:0 4px 12px rgba(16,185,129,0.3);}
+        .btn-save:hover{background:var(--primary-hover);transform:translateY(-1px);}
+        .btn-save:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+        /* TOAST */
+        .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);
+            border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:10px;
+            box-shadow:var(--shadow-lg);z-index:9999;transform:translateY(80px);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.4,0.64,1);}
+        .toast.show{transform:none;opacity:1;}
+        .toast i{width:18px;height:18px;}
+        .toast.success i{color:var(--primary);}
+        .toast.error i{color:var(--danger);}
+        .toast span{font-size:14px;font-weight:500;}
+
+        /* PURCHASE CONFIRM MODAL */
+        .confirm-modal{background:var(--surface);width:100%;max-width:400px;border-radius:22px;
+            overflow:hidden;box-shadow:0 32px 64px rgba(0,0,0,0.25);animation:slideUp 0.3s cubic-bezier(0.34,1.4,0.64,1);}
+        .confirm-top{padding:28px 24px 20px;text-align:center;}
+        .confirm-icon{width:60px;height:60px;border-radius:18px;background:rgba(59,130,246,0.1);
+            color:var(--info);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+        .confirm-top h3{font-size:18px;font-weight:700;margin-bottom:8px;}
+        .confirm-top p{font-size:14px;color:var(--text-muted);line-height:1.5;}
+        .confirm-product{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;
+            padding:14px 16px;margin:16px 0;text-align:left;}
+        .confirm-product-name{font-size:14px;font-weight:700;margin-bottom:4px;}
+        .confirm-product-price{font-size:20px;font-weight:800;color:var(--primary);}
+        .confirm-footer{padding:16px 24px;border-top:1px solid var(--border);background:var(--surface-2);
+            display:flex;gap:10px;}
+
+        /* MOBILE */
+        @media(max-width:900px){
+            .filter-panel{display:none;}
+            .main-content{padding:16px;}
+            .detail-inner{grid-template-columns:1fr;max-height:90vh;}
+            .photo-section{height:260px;}
+            .detail-info{padding:20px;}
+            .fg-row{grid-template-columns:1fr;}
+        }
+        @media(max-width:600px){
+            .listings-grid{grid-template-columns:1fr;}
+            .detail-actions{flex-direction:column;}
+            .detail-meta-grid{grid-template-columns:1fr;}
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <a class="nav-brand" href="#">
+        <i data-feather="leaf"></i><span>AgriSynth</span>
+    </a>
+    <div class="nav-divider"></div>
+    <span class="nav-page-title">İlan Pazarı</span>
+    <div class="nav-spacer"></div>
+    <a href="satin-alinmalar.html" class="nav-icon-btn" title="Alışverişlerim">
+        <i data-feather="shopping-bag"></i>
+    </a>
+    <a href="bildirimler.html" class="nav-icon-btn" title="Bildirimler" style="position:relative;">
+        <i data-feather="bell"></i>
+        <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;
+            background:#ef4444;color:white;font-size:10px;font-weight:700;min-width:18px;height:18px;
+            border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 4px;">0</span>
+    </a>
+    <button class="nav-icon-btn" onclick="toggleTheme()" id="themeBtn">
+        <i data-feather="moon" id="themeIcon"></i>
+    </button>
+    <button class="nav-icon-btn" onclick="goBack()" title="Panele Dön">
+        <i data-feather="arrow-left"></i>
+    </button>
+    <button class="btn-add" onclick="openAddModal()">
+        <i data-feather="plus" style="width:15px;height:15px;"></i> İlan Ver
+    </button>
+</nav>
+
+<div class="page-layout">
+
+    <aside class="filter-panel">
+        <div class="search-box">
+            <i data-feather="search"></i>
+            <input type="text" id="searchInput" placeholder="İlan ara..." oninput="applyFilters()">
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-section-title"><i data-feather="tag"></i>İlan Türü</div>
+            <div class="filter-chip-grid">
+                <button class="filter-chip active" data-type="all" onclick="setTypeFilter('all',this)">
+                    <i data-feather="grid" style="width:14px;height:14px;"></i> Tümü
+                    <span class="chip-count" id="count-all">0</span>
+                </button>
+                <button class="filter-chip" data-type="sell" onclick="setTypeFilter('sell',this)">
+                    <i data-feather="trending-up" style="width:14px;height:14px;"></i> Satılık
+                    <span class="chip-count" id="count-sell">0</span>
+                </button>
+                <button class="filter-chip" data-type="buy" onclick="setTypeFilter('buy',this)">
+                    <i data-feather="search" style="width:14px;height:14px;"></i> Aranıyor
+                    <span class="chip-count" id="count-buy">0</span>
+                </button>
+                <button class="filter-chip" data-type="mine" onclick="setTypeFilter('mine',this)">
+                    <i data-feather="user" style="width:14px;height:14px;"></i> İlanlarım
+                    <span class="chip-count" id="count-mine">0</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-section-title"><i data-feather="layers"></i>Kategori</div>
+            <div class="filter-chip-grid">
+                <button class="filter-chip active" data-cat="all" onclick="setCatFilter('all',this)">Tüm Kategoriler</button>
+                <button class="filter-chip" data-cat="land" onclick="setCatFilter('land',this)">🌾 Arazi</button>
+                <button class="filter-chip" data-cat="fruit" onclick="setCatFilter('fruit',this)">🍎 Meyve / Mahsul</button>
+                <button class="filter-chip" data-cat="animal" onclick="setCatFilter('animal',this)">🐄 Hayvan</button>
+                <button class="filter-chip" data-cat="tree" onclick="setCatFilter('tree',this)">🌳 Ağaç / Fidan</button>
+                <button class="filter-chip" data-cat="equipment" onclick="setCatFilter('equipment',this)">🚜 Ekipman</button>
+                <button class="filter-chip" data-cat="veteriner" onclick="setCatFilter('veteriner',this)">🩺 Veteriner / Sağlık</button>
+                <button class="filter-chip" data-cat="other" onclick="setCatFilter('other',this)">📦 Diğer</button>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-section-title"><i data-feather="dollar-sign"></i>Fiyat Aralığı (₺)</div>
+            <div class="price-range">
+                <input type="number" class="price-input" id="priceMin" placeholder="Min" oninput="applyFilters()">
+                <br><br>
+                <input type="number" class="price-input" id="priceMax" placeholder="Max" oninput="applyFilters()">
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="content-top">
+            <div class="result-info"><strong id="resultCount">0</strong> ilan bulundu</div>
+            <select class="sort-select" id="sortSelect" onchange="applyFilters()">
+                <option value="newest">En Yeni</option>
+                <option value="oldest">En Eski</option>
+                <option value="price-asc">Fiyat (Artan)</option>
+                <option value="price-desc">Fiyat (Azalan)</option>
+            </select>
+        </div>
+        <div id="listingsContainer"></div>
+    </main>
+</div>
+
+<div class="modal-overlay" id="detailModal" onclick="handleDetailOverlayClick(event)">
+    <div class="detail-modal" style="position:relative;">
+        <button class="detail-close" onclick="closeDetailModal()">
+            <i data-feather="x" style="width:16px;height:16px;"></i>
+        </button>
+        <div class="detail-inner" id="detailInner"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="formModal" onclick="handleFormOverlayClick(event)">
+    <div class="form-modal">
+        <div class="form-modal-header">
+            <div class="form-modal-icon"><i data-feather="edit-3" style="width:18px;height:18px;"></i></div>
+            <h3 id="formModalTitle">Yeni İlan Ver</h3>
+            <button class="form-modal-close" onclick="closeFormModal()"><i data-feather="x" style="width:13px;height:13px;"></i></button>
+        </div>
+        <div class="form-modal-body">
+            <input type="hidden" id="editId">
+            <div class="fg-row">
+                <div class="fg">
+                    <label>İlan Türü</label>
+                    <select id="fType" class="fi">
+                        <option value="sell">Satılık / Verilecek</option>
+                        <option value="buy">Alınacak / Aranıyor</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label>Kategori</label>
+                    <select id="fCategory" class="fi" onchange="toggleVetSection()">
+                        <option value="land">🌾 Arazi</option>
+                        <option value="fruit">🍎 Meyve / Mahsul</option>
+                        <option value="animal">🐄 Hayvan</option>
+                        <option value="tree">🌳 Ağaç / Fidan</option>
+                        <option value="equipment">🚜 Ekipman</option>
+                        <option value="veteriner">🩺 Veteriner / Sağlık</option> <option value="other">📦 Diğer</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="vetSection" style="display: none; background: var(--surface-2); padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:var(--text-main); margin-bottom:10px;">Müdahale Gereken Hayvanlar</label>
+                <div id="adAnimalContainer" style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;"></div>
+                
+                <button type="button" onclick="addAdAnimalRow()" style="background:transparent; border:1px solid var(--border); color:var(--text-main); padding:8px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; margin-bottom:16px;">
+                    <i data-feather="plus" style="width:14px;height:14px;"></i> Hayvan Ekle
+                </button>
+
+                <div class="fg" style="margin-bottom:0;">
+                    <label>Hastalık / Şikayet / Özel Notlar</label>
+                    <textarea id="fComplaint" class="fi" rows="3" placeholder="Örn: 3 ineğimde iştahsızlık ve ateş var..."></textarea>
+                </div>
+            </div>
+
+            <div class="fg">
+                <label>Başlık</label>
+                <input type="text" id="fTitle" class="fi" placeholder="Örn: 50 Dönüm Tarla Satılık veya Acil Veteriner Aranıyor">
+            </div>
+            <div class="fg-row">
+                <div class="fg">
+                    <label>Fiyat (₺) — Opsiyonel</label>
+                    <input type="number" id="fPrice" class="fi" placeholder="0">
+                </div>
+                <div class="fg">
+                    <label>Konum</label>
+                    <input type="text" id="fLocation" class="fi" placeholder="Örn: Tekirdağ, Süleymanpaşa">
+                </div>
+            </div>
+            <div class="fg">
+                <label>Açıklama</label>
+                <textarea id="fDesc" class="fi" placeholder="Ürün veya arazi hakkında detaylı bilgi verin..."></textarea>
+            </div>
+            <div class="fg">
+                <label>Fotoğraflar (Maks 5)</label>
+                <div class="photo-upload-area" onclick="document.getElementById('fPhotos').click()">
+                    <i data-feather="camera" style="width:28px;height:28px;"></i>
+                    <p>Fotoğraf eklemek için tıklayın</p>
+                    <p style="font-size:11px;margin-top:4px;opacity:0.6;">JPG, PNG — maks 3MB / fotoğraf</p>
+                </div>
+                <input type="file" id="fPhotos" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(event)">
+                <div class="photo-preview-row" id="photoPreviewRow"></div>
+            </div>
+        </div>
+        <div class="form-modal-footer">
+            <button class="btn-cancel" onclick="closeFormModal()">İptal</button>
+            <button class="btn-save" id="saveBtn" onclick="saveListing()">
+                <i data-feather="check" style="width:14px;height:14px;"></i> Kaydet
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="purchaseModal" onclick="if(event.target===this)closePurchaseModal()">
+    <div class="confirm-modal">
+        <div class="confirm-top">
+            <div class="confirm-icon"><i data-feather="shopping-cart" style="width:28px;height:28px;"></i></div>
+            <h3>Satın Alma Onayı</h3>
+            <p>Bu ürünü satın almak istediğinize emin misiniz? Satıcıya bildirim gönderilecektir.</p>
+            <div class="confirm-product">
+                <div class="confirm-product-name" id="confirmProductName">—</div>
+                <div class="confirm-product-price" id="confirmProductPrice">—</div>
+            </div>
+        </div>
+        <div class="confirm-footer">
+            <button class="btn-cancel" style="flex:1;text-align:center;" onclick="closePurchaseModal()">Vazgeç</button>
+            <button class="btn-purchase" style="flex:1;" id="confirmPurchaseBtn" onclick="confirmPurchase()">
+                <i data-feather="check" style="width:15px;height:15px;"></i> Satın Al
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast">
+    <i data-feather="check-circle" id="toastIcon"></i>
+    <span id="toastMsg">İşlem başarılı</span>
+</div>
+
+<script src="ilan.js"></script>
+</body>
+</html>

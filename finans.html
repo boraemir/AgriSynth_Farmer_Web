@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriSynth - Hasat & Finans Merkezi</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const savedTheme = localStorage.getItem('AgriSynth-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+    <style>
+        :root {
+            --bg: #f8fafc; --surface: #ffffff; --surface-hover: #f1f5f9;
+            --border: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b;
+            --primary: #10b981; --primary-hover: #059669; --info: #0ea5e9; 
+            --success: #22c55e; --warning: #f59e0b; --danger: #ef4444;
+            --modal-bg: rgba(15, 23, 42, 0.6);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        [data-theme="dark"] {
+            --bg: #0f172a; --surface: #1e293b; --surface-hover: #334155;
+            --border: #334155; --text-main: #f8fafc; --text-muted: #94a3b8;
+            --modal-bg: rgba(0, 0, 0, 0.8);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+        }
+
+        html { -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior-y: none; margin: 0; font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: 0.3s; }
+        button, a, .card { touch-action: manipulation; }
+
+        /* --- SİDEBAR & LAYOUT --- */
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 20px; z-index: 100; transition: all 0.3s ease; }
+        .sidebar-brand { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 40px; padding-left: 10px;}
+        .sidebar-brand i { color: var(--primary); }
+        .nav-menu { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; color: var(--text-muted); font-weight: 500; cursor: pointer; text-decoration: none;}
+        .nav-item:hover { background: var(--surface-hover); color: var(--text-main); }
+        .nav-item.active { background: rgba(16, 185, 129, 0.1); color: var(--primary); font-weight: 600; }
+        .content-area { flex: 1; overflow-y: auto; padding: 30px; }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: 70px; flex-direction: row; padding: 10px 0; border-right: none; border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.05);}
+            .sidebar-brand { display: none; }
+            .nav-menu { flex-direction: row; justify-content: flex-start; width: 100%; gap: 5px; overflow-x: auto; padding: 0 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch;}
+            .nav-menu::-webkit-scrollbar { display: none; }
+            .nav-item { flex-direction: column; gap: 4px; padding: 8px 12px; border-radius: 8px; flex: 0 0 auto; min-width: 65px; justify-content: center; font-size: 11px; }
+            .nav-item span { display: none; }
+            .content-area { padding: 15px 15px 85px 15px; } 
+        }
+
+        /* --- ORTAK --- */
+        .page-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
+        .page-header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+        .btn-primary { background: var(--primary); color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; transition: all 0.2s;}
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-danger-outline { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight:600; transition: all 0.2s;}
+        .btn-danger-outline:hover { background: var(--danger); color: white; }
+
+        .filter-select { background: var(--surface); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; color: var(--text-main); font-weight: 500; font-family: inherit; outline: none; cursor: pointer; }
+        .filter-select:focus { border-color: var(--primary); }
+
+        /* --- ÖZET KARTLARI --- */
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .summary-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 15px; transition: transform 0.2s;}
+        .summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+        .sc-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .sc-info h3 { font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 2px;}
+        .sc-info p { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase;}
+
+        /* --- GRAFİK ALANI --- */
+        .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 30px; }
+        .chart-header { font-size: 16px; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
+        .chart-container { position: relative; height: 350px; width: 100%; cursor: pointer;} /* Tıklanabilir olduğu için cursor eklendi */
+
+        /* --- GEÇMİŞ LİSTESİ --- */
+        .records-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden;}
+        .records-header { padding: 20px; border-bottom: 1px solid var(--border); font-size: 16px; font-weight: 600; }
+        .record-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border); transition: background 0.2s;}
+        .record-item:hover { background: var(--surface-hover); }
+        .record-item:last-child { border-bottom: none; }
+        
+        .rec-left { display: flex; align-items: center; gap: 15px; }
+        .rec-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;}
+        .rec-info h4 { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 2px;}
+        .rec-info p { font-size: 12px; color: var(--text-muted); }
+        
+        .rec-right { text-align: right; }
+        .rec-amount { font-size: 15px; font-weight: 700; }
+        .rec-qty { font-size: 12px; color: var(--text-muted); margin-top: 2px;}
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--modal-bg); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+        
+        .modal-content { background: var(--surface); width: 100%; max-width: 600px; max-height: 90vh; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); display:flex; flex-direction:column;}
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;}
+        .modal-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;}
+        .modal-footer { padding: 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: var(--surface-hover);}
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-input, .form-select { background: var(--bg); border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: var(--text-main); font-family: inherit; width: 100%;}
+        .form-input:focus, .form-select:focus { border-color: var(--primary); }
+
+        /* Çubuk Detay Modalı Özel Tablo Stili */
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .detail-table th { text-align: left; padding: 10px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; }
+        .detail-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        .detail-table tr:last-child td { border-bottom: none; }
+        .dt-amount { font-weight: 700; text-align: right; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand"><i data-feather="leaf"></i><span>AgriSynth</span></div>
+        <div class="nav-menu">
+            <a href="ciftci.html" class="nav-item"><i data-feather="arrow-left"></i><span>Panele Dön</span></a>
+            <a href="sulama-ilaclama.html" class="nav-item"><i data-feather="droplet"></i><span>Sulama & İlaçlama</span></a>
+            <a href="yemleme-saglik.html" class="nav-item"><i data-feather="heart"></i><span>Yemleme & Sağlık</span></a>
+            <div class="nav-item active"><i data-feather="pie-chart"></i><span>Hasat & Finans</span></div>
+        </div>
+    </aside>
+
+    <main class="content-area">
+        <div class="page-header">
+            <div>
+                <h1>Hasat ve Finans Analizi</h1>
+                <p>Ürün verimliliğinizi ve karlılığınızı takip edin.</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <select id="timeFilter" class="filter-select" onchange="applyFilter()">
+                    <option value="6">Son 6 Ay (Grafik İçin İdeal)</option>
+                    <option value="1">Bu Ay</option>
+                    <option value="3">Son 3 Ay</option>
+                    <option value="12">Bu Yıl</option>
+                    <option value="all">Tüm Zamanlar</option>
+                </select>
+                <button class="btn-primary" onclick="openModal()"><i data-feather="plus"></i> Yeni Kayıt</button>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="sc-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--success);"><i data-feather="trending-up"></i></div>
+                <div class="sc-info"><h3 id="totIncome">0 ₺</h3><p>Seçili Dönem Geliri</p></div>
+            </div>
+            <div class="summary-card">
+                <div class="sc-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);"><i data-feather="trending-down"></i></div>
+                <div class="sc-info"><h3 id="totExpense">0 ₺</h3><p>Seçili Dönem Gideri</p></div>
+            </div>
+            <div class="summary-card">
+                <div class="sc-icon" style="background: rgba(14, 165, 233, 0.1); color: var(--info);"><i data-feather="dollar-sign"></i></div>
+                <div class="sc-info"><h3 id="netProfit">0 ₺</h3><p>Net Kar / Zarar</p></div>
+            </div>
+            <div class="summary-card">
+                <div class="sc-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);"><i data-feather="package"></i></div>
+                <div class="sc-info"><h3 id="totProduction">0</h3><p>Hasat / Üretim Miktarı</p></div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <span><i data-feather="bar-chart-2" style="color:var(--primary); margin-right:8px; vertical-align:text-bottom;"></i> Aylık Kar / Zarar Analizi</span>
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">Detayları görmek için sütunlara tıklayın</span>
+            </div>
+            <div class="chart-container"><canvas id="financeChart"></canvas></div>
+        </div>
+
+        <div class="records-card">
+            <div class="records-header">İşlem Geçmişi (Seçili Dönem)</div>
+            <div id="loadingStatus" style="text-align:center; padding:20px; color:var(--text-muted);"><i data-feather="loader" style="animation: spin 1s linear infinite;"></i> Yükleniyor...</div>
+            <div id="recordsList"></div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="recordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="font-size: 18px; margin:0;">Yeni Finans / Hasat Kaydı</h2>
+                <button style="background:transparent;border:none;color:var(--text-muted); cursor:pointer;" onclick="closeModal()"><i data-feather="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">İlgili Arazi</label>
+                    <select id="recField" class="form-select" onchange="updateProductOptions()" required>
+                        <option value="" disabled selected>Arazi Seçin</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Kayıt Türü</label>
+                        <select id="recType" class="form-select" onchange="handleTypeChange()">
+                            <option value="hasat">Meyve/Mahsul Hasadı</option>
+                            <option value="hayvansal">Hayvansal Üretim (Süt/Yumurta)</option>
+                            <option value="satis">Ürün/Hayvan Satışı (Gelir)</option>
+                            <option value="gider">Tarımsal/Veteriner Gideri</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tarih</label>
+                        <input type="date" id="recDate" class="form-input" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ürün / İşlem Adı</label>
+                    <select id="recNameSelect" class="form-select" required>
+                        <option value="" disabled selected>Önce Arazi Seçin</option>
+                    </select>
+                    <input type="text" id="recNameInput" class="form-input" placeholder="Örn: Üre Gübresi, Traktör Mazotu, İlaç vb." style="display: none;">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Miktar</label>
+                        <input type="number" id="recQty" class="form-input" placeholder="Örn: 500" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Birim</label>
+                        <select id="recUnit" class="form-select">
+                            <option value="kg">Kilogram (kg)</option>
+                            <option value="Ton">Ton</option>
+                            <option value="Litre">Litre (L)</option>
+                            <option value="Adet">Adet</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="amountGroup" style="display: none;">
+                    <label class="form-label">Tutar (₺)</label>
+                    <input type="number" id="recAmount" class="form-input" placeholder="Örn: 15000" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ek Notlar (Opsiyonel)</label>
+                    <input type="text" id="recNotes" class="form-input" placeholder="Kime satıldı, kimden alındı vs.">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" style="width:auto; padding:10px 20px;" onclick="closeModal()">İptal</button>
+                <button class="btn-primary" onclick="saveRecord()"><i data-feather="check"></i> Sistemi Güncelle</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="chartDetailModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px; margin:0;" id="cdTitle">Aylık Detay Raporu</h2>
+                <button style="background:transparent;border:none;color:var(--text-muted); cursor:pointer;" onclick="closeDetailModal()"><i data-feather="x"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Arazi</th>
+                            <th>Ürün/İşlem</th>
+                            <th style="text-align: right;">Tutar (₺)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cdTableBody">
+                        </tbody>
+                </table>
+                <div id="cdEmpty" style="display:none; padding:30px; text-align:center; color:var(--text-muted);">Bu ay için detay kaydı bulunamadı.</div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between; align-items: center;">
+                <span id="cdTotal" style="font-weight: 700; font-size: 16px;">Toplam: 0 ₺</span>
+                <button class="btn-secondary" style="width:auto; padding:8px 16px;" onclick="closeDetailModal()">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="finans.js"></script>
+</body>
+</html>

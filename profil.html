@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriSynth - Profilim</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const savedTheme = localStorage.getItem('AgriSynth-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+    <style>
+        /* --- GELİŞMİŞ TEMA RENKLERİ --- */
+        :root {
+            --bg: #f1f5f9; 
+            --surface: rgba(255, 255, 255, 0.95); 
+            --surface-solid: #ffffff;
+            --surface-hover: #f8fafc;
+            --border: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b;
+            --primary: #10b981; 
+            --primary-hover: #059669; 
+            --primary-light: rgba(16, 185, 129, 0.1);
+            --info: #0ea5e9; 
+            --danger: #ef4444;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --banner-grad: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0b1120; 
+            --surface: rgba(30, 41, 59, 0.95); 
+            --surface-solid: #1e293b;
+            --surface-hover: #0f172a;
+            --border: #334155; 
+            --text-main: #f8fafc; 
+            --text-muted: #94a3b8;
+            --primary-light: rgba(16, 185, 129, 0.15);
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.2);
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+            --banner-grad: linear-gradient(135deg, #065f46 0%, #022c22 100%);
+        }
+
+        /* --- GENEL AYARLAR --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        html { -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); display: flex; flex-direction: column; min-height: 100dvh; transition: background-color 0.3s ease, color 0.3s ease; }
+        
+        /* --- ÜST BARI (HEADER) GLASSMORPHISM --- */
+        .top-navbar { background: var(--surface); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; transition: all 0.3s ease; }
+        .nav-left { display: flex; align-items: center; gap: 16px; }
+        .back-btn { background: var(--surface-hover); border: 1px solid var(--border); color: var(--text-main); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow-sm); }
+        .back-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateX(-2px); }
+        .page-title { font-size: 20px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+        .theme-btn { border: 1px solid transparent; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; transition: all 0.2s; }
+        .theme-btn:hover { background: var(--surface-hover); color: var(--text-main); border-color: var(--border); }
+
+        /* --- İÇERİK ALANI & KAPAK FOTOĞRAFI --- */
+        .content-area { flex: 1; padding: 30px 24px 60px; max-width: 1000px; margin: 0 auto; width: 100%; animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .profile-header-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 24px; position: relative; }
+        .profile-banner { height: 160px; background: var(--banner-grad); position: relative; }
+        .profile-banner::after { content: ''; position: absolute; inset: 0; background: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z" fill="rgba(255,255,255,0.05)" fill-rule="evenodd"/></svg>'); }
+        
+        .profile-info-section { padding: 0 30px 30px; display: flex; align-items: flex-end; gap: 24px; margin-top: -60px; position: relative; z-index: 10; }
+        
+        .avatar-wrapper { position: relative; }
+        .avatar-wrapper img { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 6px solid var(--surface-solid); background: var(--surface-hover); box-shadow: 0 4px 14px rgba(0,0,0,0.1); transition: transform 0.3s ease; }
+        .avatar-wrapper:hover img { transform: scale(1.02); }
+        .avatar-edit-btn { position: absolute; bottom: 8px; right: 8px; background: var(--primary); color: white; border: 4px solid var(--surface-solid); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(16,185,129,0.3); }
+        .avatar-edit-btn:hover { background: var(--primary-hover); transform: scale(1.1); }
+        
+        .profile-text-info { padding-bottom: 10px; flex: 1; }
+        .profile-text-info h3 { font-size: 28px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; letter-spacing: -0.5px; }
+        .profile-role-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--primary-light); color: var(--primary); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+
+        .profile-grid { display: grid; grid-template-columns: 1fr 1.8fr; gap: 24px; }
+        .card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); padding: 30px; display: flex; flex-direction: column; transition: box-shadow 0.3s ease; }
+        .card:hover { box-shadow: var(--shadow-hover); }
+        
+        .card-title { font-size: 18px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 16px; color: var(--text-main); }
+        .card-title i { color: var(--primary); width: 22px; height: 22px; }
+
+        /* --- MODERN FORMLAR --- */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-left: 4px; }
+        
+        .form-input { background: var(--bg); border: 2px solid transparent; border-radius: 14px; padding: 14px 18px; color: var(--text-main); font-family: inherit; font-size: 15px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); width: 100%; font-weight: 500; }
+        .form-input:focus { background: var(--surface-solid); border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); }
+        .form-input:disabled { opacity: 0.6; cursor: not-allowed; background: var(--surface-hover); border-color: var(--border); }
+        .form-input::placeholder { color: #94a3b8; font-weight: 400; }
+
+        /* --- PREMİUM BUTONLAR --- */
+        .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%); color: #fff; border: none; padding: 14px 28px; border-radius: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-size: 15px; width: 100%; box-shadow: 0 4px 12px rgba(16,185,129,0.25); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,0.35); }
+        .btn-primary:active { transform: translateY(0); }
+
+        /* --- TOAST --- */
+        .toast { position: fixed; bottom: 30px; right: 30px; background: var(--surface-solid); border: 1px solid var(--border); border-radius: 16px; padding: 16px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.4s cubic-bezier(0.34,1.5,0.64,1); }
+        .toast.show { transform: none; opacity: 1; }
+        .toast.success i { color: var(--primary); }
+        .toast.error i { color: var(--danger); }
+        .toast span { font-size: 15px; font-weight: 600; color: var(--text-main); }
+
+        /* --- MOBİL UYUM --- */
+        @media (max-width: 768px) {
+            .profile-info-section { flex-direction: column; align-items: center; text-align: center; margin-top: -70px; }
+            .profile-text-info { padding-bottom: 0; }
+            .profile-grid { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr; }
+            .content-area { padding: 20px 16px 80px; }
+            .top-navbar { padding: 12px 16px; }
+            .toast { bottom: 24px; left: 16px; right: 16px; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-navbar">
+        <div class="nav-left">
+            <button class="back-btn" onclick="goBack()" title="Panele Dön">
+                <i data-feather="arrow-left"></i>
+            </button>
+            <div class="page-title">Profilim</div>
+        </div>
+        <button class="theme-btn" onclick="toggleTheme()" title="Tema Değiştir">
+            <i id="themeToggleBtn" data-feather="moon"></i>
+        </button>
+    </div>
+
+    <main class="content-area">
+        
+        <div class="profile-header-card">
+            <div class="profile-banner"></div>
+            <div class="profile-info-section">
+                <div class="avatar-wrapper">
+                    <img id="profileAvatarPreview" src="https://via.placeholder.com/140" alt="Avatar">
+                    <div id="profileAvatarLoading" style="display:none; position:absolute; inset:6px; background:rgba(0,0,0,0.5); border-radius:50%; align-items:center; justify-content:center; color:white;">
+                        <i data-feather="loader" style="animation: spin 1s linear infinite;"></i>
+                    </div>
+                    <div class="avatar-edit-btn" onclick="document.getElementById('profileAvatarInput').click()" title="Fotoğraf Değiştir">
+                        <i data-feather="camera" style="width: 18px; height: 18px;"></i>
+                    </div>
+                    <input type="file" id="profileAvatarInput" accept="image/*" style="display: none;" onchange="updateProfileAvatar(event)">
+                </div>
+                
+                <div class="profile-text-info">
+                    <h3 id="profileNameDisplay">Yükleniyor...</h3>
+                    <div class="profile-role-badge">
+                        <i data-feather="award" style="width: 14px; height: 14px;"></i>
+                        <span id="profileRoleDisplay">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-grid">
+            
+            <div style="display:flex; flex-direction:column; gap:24px;">
+                <div class="card">
+                    <div class="card-title"><i data-feather="shield"></i> Güvenlik Ayarları</div>
+                    <div class="form-group" style="margin-bottom: 24px;">
+                        <label class="form-label">Yeni Şifre</label>
+                        <input type="password" id="profileNewPassword" class="form-input" placeholder="En az 6 karakter giriniz">
+                    </div>
+                    <button class="btn-primary" onclick="updateProfilePassword()">
+                        <i data-feather="key" style="width:18px;"></i> Şifreyi Güncelle
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title"><i data-feather="user"></i> Kişisel Bilgiler</div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Ad</label>
+                        <input type="text" id="profAd" class="form-input" placeholder="Adınız">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Soyad</label>
+                        <input type="text" id="profSoyad" class="form-input" placeholder="Soyadınız">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Kullanıcı Adı <span style="opacity:0.5;font-size:11px;">(Değiştirilemez)</span></label>
+                        <input type="text" id="profUsername" class="form-input" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">E-posta <span style="opacity:0.5;font-size:11px;">(Değiştirilemez)</span></label>
+                        <input type="email" id="profEmail" class="form-input" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">TC Kimlik</label>
+                        <input type="text" id="profTc" class="form-input" maxlength="11" placeholder="11 Haneli TC Kimlik">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Telefon</label>
+                        <input type="text" id="profTelefon" class="form-input" placeholder="05XX XXX XX XX">
+                    </div>
+                    
+                    <div class="form-group full-width" style="margin-bottom: 0;">
+                        <label class="form-label">Şehir</label>
+                        <input type="text" id="profSehir" class="form-input" placeholder="Yaşadığınız Şehir">
+                    </div>
+                </div>
+
+                <div style="margin-top:30px; padding-top:24px; border-top:1px solid var(--border); display: flex; justify-content: flex-end;">
+                    <button class="btn-primary" onclick="updateProfileData()" id="profileSaveBtn" style="width: auto;">
+                        <i data-feather="save" style="width:18px;"></i> Değişiklikleri Kaydet
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div class="toast" id="toast">
+        <i data-feather="check-circle" id="toastIcon"></i>
+        <span id="toastMsg">İşlem başarılı</span>
+    </div>
+
+    <script>
+        feather.replace();
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('AgriSynth-theme', newTheme);
+            document.getElementById('themeToggleBtn').setAttribute('data-feather', newTheme === 'light' ? 'moon' : 'sun');
+            feather.replace();
+        }
+
+        const initTheme = document.documentElement.getAttribute('data-theme');
+        document.getElementById('themeToggleBtn').setAttribute('data-feather', initTheme === 'light' ? 'moon' : 'sun');
+        feather.replace();
+
+        const SUPABASE_URL = 'https://chozcpctihufghnzsten.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob3pjcGN0aWh1ZmdobnpzdGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MzYxNTAsImV4cCI6MjA4ODIxMjE1MH0.r3ZwkAT0RqWHryEolLwcUzsB2Gu-iW3O9fKesyjd6eE';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let userRole = 'user'; 
+
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            t.className = `toast ${type}`;
+            document.getElementById('toastIcon').setAttribute('data-feather', type === 'success' ? 'check-circle' : 'alert-circle');
+            feather.replace();
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3500);
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => { 
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (error || !session) {
+                window.location.href = "index.html";
+                return;
+            }
+            currentUser = session.user;
+            const { data: profile } = await supabaseClient.from('users').select('*').eq('id', currentUser.id).single();
+            if (profile) {
+                userRole = profile.rol || 'user'; 
+                populateProfileForm(profile);
+            }
+        });
+
+        function populateProfileForm(profile) {
+            document.getElementById('profAd').value = profile.ad || '';
+            document.getElementById('profSoyad').value = profile.soyad || '';
+            document.getElementById('profUsername').value = profile.username || '';
+            document.getElementById('profEmail').value = profile.email || currentUser.email || '';
+            document.getElementById('profTc').value = profile.tc_kimlik || '';
+            document.getElementById('profTelefon').value = profile.telefon || '';
+            document.getElementById('profSehir').value = profile.sehir || '';
+            
+            document.getElementById('profileNameDisplay').innerText = `${profile.ad} ${profile.soyad}`;
+            document.getElementById('profileRoleDisplay').innerText = profile.rol || 'Kullanıcı';
+
+            if(profile.avatar_url) {
+                document.getElementById('profileAvatarPreview').src = profile.avatar_url;
+            }
+        }
+
+        async function updateProfileData() {
+            const btn = document.getElementById('profileSaveBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i data-feather="loader" style="animation: spin 1s linear infinite;"></i> Kaydediliyor...`;
+            feather.replace();
+
+            const ad = document.getElementById('profAd').value.trim();
+            const soyad = document.getElementById('profSoyad').value.trim();
+            const tc_kimlik = document.getElementById('profTc').value.trim();
+            const telefon = document.getElementById('profTelefon').value.trim();
+            const sehir = document.getElementById('profSehir').value.trim();
+
+            if (!ad || !soyad) {
+                showToast("Ad ve soyad boş bırakılamaz.", "error");
+                btn.disabled = false;
+                btn.innerHTML = `<i data-feather="save" style="width:18px;"></i> Değişiklikleri Kaydet`;
+                feather.replace();
+                return;
+            }
+
+            const { error } = await supabaseClient.from('users').update({
+                ad, soyad, tc_kimlik, telefon, sehir
+            }).eq('id', currentUser.id);
+
+            btn.disabled = false;
+            btn.innerHTML = `<i data-feather="save" style="width:18px;"></i> Değişiklikleri Kaydet`;
+            feather.replace();
+
+            if (error) {
+                showToast("Güncelleme hatası: " + error.message, "error");
+            } else {
+                showToast("Kişisel bilgileriniz başarıyla güncellendi.");
+                document.getElementById('profileNameDisplay').innerText = ad + ' ' + soyad;
+            }
+        }
+
+        async function updateProfilePassword() {
+            const newPassword = document.getElementById('profileNewPassword').value;
+            if (newPassword.length < 6) {
+                showToast("Şifre en az 6 karakter olmalıdır.", "error");
+                return;
+            }
+
+            const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+            
+            if (error) {
+                showToast("Şifre değiştirilemedi: " + error.message, "error");
+            } else {
+                showToast("Şifreniz başarıyla değiştirildi.");
+                document.getElementById('profileNewPassword').value = '';
+            }
+        }
+
+        async function updateProfileAvatar(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('profileAvatarLoading').style.display = 'flex';
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            let { error: uploadError } = await supabaseClient.storage.from('avatars').upload(filePath, file, { upsert: true });
+
+            if (uploadError) {
+                showToast("Fotoğraf yüklenemedi: " + uploadError.message, "error");
+                document.getElementById('profileAvatarLoading').style.display = 'none';
+                return;
+            }
+
+            const { data: publicUrlData } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
+            const publicURL = publicUrlData.publicUrl;
+
+            const { error: updateError } = await supabaseClient.from('users').update({ avatar_url: publicURL }).eq('id', currentUser.id);
+
+            document.getElementById('profileAvatarLoading').style.display = 'none';
+
+            if (updateError) {
+                showToast("Fotoğraf kaydedilemedi.", "error");
+            } else {
+                showToast("Profil fotoğrafınız güncellendi.");
+                document.getElementById('profileAvatarPreview').src = publicURL;
+            }
+        }
+
+        function goBack() {
+            if (userRole === 'ciftci' || userRole === 'çiftçi') {
+                window.location.href = "ciftci.html";
+            } else if (userRole === 'doktor' || userRole === 'veteriner') {
+                window.location.href = "doktor.html";
+            } else if (userRole === 'user') {
+                window.location.href = "normal-user.html";
+            } else {
+                window.history.back();
+            }
+        }
+    </script>
+</body>
+</html>
